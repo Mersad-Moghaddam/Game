@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname,'..');
+const out = path.join(root,'dist');
+fs.rmSync(out,{recursive:true,force:true});
+fs.mkdirSync(out,{recursive:true});
+for (const entry of ['index.html','style.css','src']) fs.cpSync(path.join(root,entry), path.join(out,entry), {recursive:true});
+console.log('Built dist/');
