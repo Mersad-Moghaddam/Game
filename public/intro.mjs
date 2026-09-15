@@ -1,6 +1,6 @@
 // A short, skippable deployment comic. Combat time starts after the handoff.
 export function createIntro(
-  { ctx, box, oval, line, text, programmer, bug },
+  { ctx, box, oval, line, text, milo, marlow, creature },
   reducedMotion,
 ) {
   return function drawIntro(g, menu = false) {
@@ -61,7 +61,7 @@ export function createIntro(
       ctx.rotate(-0.04);
       ctx.translate(-532, -332);
     }
-    programmer(523 + lean, 290, 2.2, t, { seated: true });
+    marlow(523 + lean, 290, 2.2, t, { seated: true });
     ctx.restore();
     // Wide rounded desk with drawers and a monitor large enough to read.
     box(386, 407, 504, 24, "#a7bdd3", 7, "#102237");
@@ -96,7 +96,7 @@ export function createIntro(
     box(715, 389, 24, 14, "#7187a3", 2);
     box(680, 402, 94, 6, "#425c78", 3);
     box(604, 224, 250, 24, broken ? "#874258" : "#314f69", 5);
-    text("mersad-is-offline / production", 729, 240, 10, "#e6f0fa");
+    text("milo-is-offline / production", 729, 240, 10, "#e6f0fa");
     if (!pressed) {
       text("$ ship --trust-me-bro", 619, 269, 12, "#a6ead6", "left");
       text("Tests: skipped", 619, 292, 12, "#ffc765", "left");
@@ -126,7 +126,7 @@ export function createIntro(
           ? "Reviewers notified: 0"
           : t < 4.3
             ? "Bugs are a deliverable, right?"
-            : "Canceling Mersad’s plans…",
+            : "Canceling Milo’s plans…",
         729,
         345,
         10,
@@ -145,8 +145,8 @@ export function createIntro(
       }
     } else {
       text("500: WEEKEND NOT FOUND", 729, 277, 14, "#ffbfaf");
-      text("Root cause: Malvandi", 729, 302, 11, "#f4d7df");
-      text("Assigned to: Mersad", 729, 325, 12, "#ffd166");
+      text("Root cause: Marlow", 729, 302, 11, "#f4d7df");
+      text("Assigned to: Milo", 729, 325, 12, "#ffd166");
       text("Rollback? Never heard of her.", 729, 356, 10, "#dfb7cd");
     }
     // Three coffees: one for courage, two for plausible deniability.
@@ -185,7 +185,7 @@ export function createIntro(
       for (let i = 0; i < 9; i++) {
         const f = Math.max(0, t - 5.4 - i * 0.07),
           a = 1.3 + i * 0.62;
-        bug(
+        creature(
           {
             x: 729 + Math.cos(a) * f * 135,
             y: 302 + Math.sin(a) * f * 105,
@@ -199,7 +199,7 @@ export function createIntro(
     }
     if (!menu) {
       box(28, 68, 309, 151, "#f3f5fd", 16, "#102237");
-      text("MALVANDI / bug manufacturer", 182, 96, 11, "#6f6c83");
+      text("MARLOW / bug manufacturer", 182, 96, 11, "#6f6c83");
       text(
         broken
           ? "“Probably a frontend issue.”"
@@ -215,7 +215,7 @@ export function createIntro(
       );
       text(
         broken
-          ? "Mersad has been volunteered."
+          ? "Milo has been volunteered."
           : pressed
             ? "He considers this a productivity hack."
             : "“What could go wrong?”",
@@ -226,8 +226,8 @@ export function createIntro(
         "center",
         "sans-serif",
       );
-      text("Mersad", 182, 290, 18, "#8ce1d1");
-      programmer(182, 356, 1.5, t, { angle: 0 });
+      text("Milo", 182, 290, 18, "#8ce1d1");
+      milo(182, 356, 1.5, t, { angle: 0 });
       text(
         broken
           ? "“I was literally logging off.”"
@@ -239,7 +239,7 @@ export function createIntro(
       );
       text(
         broken
-          ? "MALVANDI SHIPS. MERSAD SUFFERS."
+          ? "MARLOW SHIPS. MILO SUFFERS."
           : "One confident click. Four phases of consequences.",
         480,
         536,

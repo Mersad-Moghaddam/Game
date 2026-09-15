@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#b6cef2" />
+    <title>Milo vs. Bugs — Marlow's Friday deploy</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <header class="page-heading">
+        <div class="logo">
+          <span class="logo-mark">&lt;/&gt;</span
+          ><span>unproductive games</span>
+        </div>
+        <span class="edition">Marlow ships. Milo suffers.</span>
+      </header>
+      <section class="game-window" aria-label="Milo vs. Bugs game">
+        <div class="titlebar">
+          <div class="window-dots"><i></i><i></i><i></i></div>
+          <span>milo_vs_bugs.exe</span>
+          <div class="titlebar-actions">
+            <button id="sound" aria-pressed="false" title="Toggle sound">
+              Sound: off
+            </button>
+            <button
+              id="fullscreen"
+              title="Fullscreen (F)"
+              aria-label="Enter fullscreen"
+            >
+              ⛶
+            </button>
+          </div>
+        </div>
+        <div class="game-heading">
+          <div>
+            <h1>Milo <span>vs.</span> Bugs<span class="period">.</span></h1>
+            <p>Marlow deploys the bugs. Milo gets the incident.</p>
+          </div>
+          <div class="best">Personal best<strong id="best">0000</strong></div>
+        </div>
+        <div class="hud">
+          <div>
+            <span class="stat-label">Sanity</span
+            ><strong id="hearts" aria-label="3 hearts">♥ ♥ ♥</strong>
+          </div>
+          <div>
+            <span class="stat-label">Patch points</span
+            ><strong id="score">0000</strong>
+          </div>
+          <div>
+            <span class="stat-label">Phase ends</span
+            ><strong id="timer">15s</strong>
+          </div>
+          <button id="pause" disabled aria-label="Pause game">Ⅱ</button>
+        </div>
+        <div
+          class="phase-track"
+          aria-label="Four increasingly difficult phases"
+        >
+          <span class="phase-step current">1 <b>Small fix</b></span
+          ><span class="phase-step">2 <b>Hotfix</b></span
+          ><span class="phase-step">3 <b>Dependency hell</b></span
+          ><span class="phase-step">4 <b>Friday production</b></span>
+        </div>
+        <div class="arena" data-state="menu">
+          <canvas
+            id="game"
+            width="960"
+            height="560"
+            aria-label="Large scrolling 2D map. Play as Milo. Move with WASD or arrows, aim with mouse or IJKL, hold click or Space to shoot. A minimap shows your location."
+          ></canvas>
+          <div class="arena-tag">
+            <span></span> <b id="location">Production</b>
+            <span class="branch">↳ 1920 × 1120</span>
+          </div>
+          <div id="boost" hidden>
+            ☕ Caffeine mode <span id="boost-time"></span>
+          </div>
+          <button id="skip-intro" hidden>Skip intro ↗</button>
+          <div id="overlay" class="welcome">
+            <div class="intro-icon">&lt;/&gt;<span>!</span></div>
+            <p class="dialog-kicker" id="kicker">
+              Friday, 4:59 PM. A terrible idea.
+            </p>
+            <h2 id="dialog-title">His bugs.<br />Your problem.</h2>
+            <p id="dialog-copy">
+              Marlow skipped the tests. Again.<br />You’re Milo. Grab your patch
+              gun.<br />Bigger map. Same terrible coworker.
+            </p>
+            <button class="play" id="play">
+              Let Marlow deploy <span>▶</span>
+            </button>
+            <p class="dialog-note" id="dialog-note">
+              WASD to move · mouse to aim · hold click to fire
+            </p>
+          </div>
+          <div id="upgrade" hidden>
+            <div class="upgrade-panel">
+              <p class="dialog-kicker">Deployment survived</p>
+              <h2>Pick an upgrade</h2>
+              <div id="upgrade-cards" class="cards"></div>
+              <p class="dialog-note">Press 1, 2 or 3 · or tap a card</p>
+            </div>
+          </div>
+          <div class="wave-bar">
+            <span id="wave">1/4 · Small fix</span
+            ><span id="wave-countdown">Phase ends in 15s</span>
+          </div>
+          <div class="phase-meter"><div id="phase-progress"></div></div>
+        </div>
+        <div class="terminal" aria-live="polite">
+          <span class="prompt">&gt;_</span
+          ><span id="message"
+            >git push --force &nbsp; // what could possibly go wrong?</span
+          ><span class="cursor"></span>
+        </div>
+        <div class="controls">
+          <span
+            ><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+            <small>or arrows to move</small></span
+          ><span><kbd>mouse</kbd> <small>aim + hold click</small></span
+          ><span><kbd>space</kbd> <small>shoot · IJKL also aims</small></span
+          ><span><kbd>F</kbd> <small>fullscreen</small></span>
+        </div>
+      </section>
+      <div class="touch-controls">
+        <div class="dpad">
+          <button data-key="ArrowUp" aria-label="Move up">▲</button
+          ><button data-key="ArrowLeft" aria-label="Move left">◀</button
+          ><button data-key="ArrowDown" aria-label="Move down">▼</button
+          ><button data-key="ArrowRight" aria-label="Move right">▶</button>
+        </div>
+        <span class="touch-hint"
+          >Move<br />☕ = faster patches<br />Aim &amp; fire →</span
+        >
+        <div
+          id="aim-pad"
+          aria-label="Drag in a direction to aim and fire"
+          role="group"
+        >
+          <span id="aim-knob">⌖</span>
+        </div>
+      </div>
+      <footer>
+        <span>Bugs by Marlow. Damage control by Milo.</span
+        ><span>No programmers were productive in the making of this game.</span>
+      </footer>
+    </main>
+    <script type="module" src="main.mjs"></script>
+  </body>
+</html>

@@ -17,7 +17,7 @@ export function screenToWorld(point, player) {
 export const ZONES = [
   {
     name: "Server racks",
-    joke: "Have you tried turning Mersad off and on?",
+    joke: "Have you tried turning Milo off and on?",
     x: 100,
     y: 100,
     w: 650,
@@ -44,7 +44,7 @@ export const ZONES = [
   },
   {
     name: "Production",
-    joke: "Malvandi shipped it. Mersad inherited it.",
+    joke: "Marlow shipped it. Milo inherited it.",
     x: 820,
     y: 460,
     w: 1000,

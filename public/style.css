@@ -81,11 +81,64 @@ main {
 .window-dots i:nth-child(3) {
   background: #71cbb6;
 }
+.titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 #sound {
   border: 0;
   background: transparent;
   font: 11px monospace;
   color: #263e60;
+}
+#fullscreen {
+  border: 1px solid #a7b9d2;
+  border-radius: 5px;
+  background: #f4f7ff;
+  color: #172a46;
+  width: 28px;
+  height: 24px;
+  line-height: 1;
+  font-size: 14px;
+}
+#fullscreen:hover {
+  background: #ffe19c;
+}
+.game-window:fullscreen,
+.game-window.maximize {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0b1626;
+}
+.game-window:fullscreen .arena,
+.game-window.maximize .arena {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1626;
+}
+.game-window:fullscreen canvas,
+.game-window.maximize canvas {
+  width: auto;
+  height: auto;
+  box-shadow: 0 0 0 2px #172a46;
+}
+.game-window:fullscreen .game-heading,
+.game-window:fullscreen .phase-track,
+.game-window:fullscreen .terminal,
+.game-window:fullscreen .controls,
+.game-window.maximize .game-heading,
+.game-window.maximize .phase-track,
+.game-window.maximize .terminal,
+.game-window.maximize .controls {
+  display: none;
 }
 .game-heading {
   display: flex;
@@ -556,113 +609,87 @@ footer {
 .welcome .play {
   font-size: 14px;
 }
-#honarvar {
+#upgrade {
   position: absolute;
-  bottom: 24px;
-  right: 22px;
+  inset: 0;
+  z-index: 4;
   display: flex;
   align-items: center;
-  gap: 0;
-  line-height: 1.4;
-  pointer-events: none;
-  z-index: 2;
+  justify-content: center;
+  padding: 22px;
+  background: #0a1a2ee6;
   animation: review-arrives 0.25s ease-out;
 }
-.honarvar-character {
-  width: 173px;
+#upgrade[hidden] {
+  display: none;
+}
+.upgrade-panel {
   text-align: center;
-  flex-shrink: 0;
-  transform-origin: 50% 100%;
-}
-.honarvar-character svg {
-  display: block;
+  color: #f4f7ff;
+  max-width: 720px;
   width: 100%;
-  overflow: visible;
 }
-.honarvar-character strong {
-  display: block;
-  font-size: 17px;
-  color: #fff0ca;
-  background: #23364f;
-  padding: 2px 10px;
-  border-radius: 5px;
+.upgrade-panel h2 {
+  font-size: clamp(24px, 4vw, 38px);
+  margin: 0 0 18px;
 }
-.honarvar-character small {
-  display: block;
-  font-size: 9px;
-  color: #d5c8eb;
-  margin: 5px 0 0;
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
 }
-.roast-bubble {
+.card {
   position: relative;
-  background: #fff5dc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 14px 16px;
   border: 3px solid #16283f;
-  border-radius: 18px 18px 3px 18px;
-  padding: 15px 21px;
+  border-radius: 14px;
+  background: #f4f7ff;
+  color: #172a46;
   box-shadow: 0 5px 0 #0e1b2b;
-  transform: rotate(-2deg);
-  margin-right: -3px;
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease;
 }
-.roast-bubble:after {
-  content: "";
+.card:hover,
+.card:focus-visible {
+  transform: translateY(-4px);
+  background: #fff3d0;
+}
+.card-key {
   position: absolute;
-  right: -18px;
-  bottom: 20px;
-  border-top: 12px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-left: 19px solid #fff5dc;
+  top: 8px;
+  left: 10px;
+  font: 700 11px monospace;
+  color: #7b8aa3;
 }
-#roast-phase {
-  font: 10px monospace;
-  color: #736a6b;
+.card-icon svg {
+  width: 40px;
+  height: 40px;
+  color: #2f8f79;
 }
-#roast-line {
-  font:
-    700 25px/1.8 Tahoma,
-    Arial,
-    sans-serif;
-  color: #362a45;
-  margin: 5px 0;
-  white-space: nowrap;
+.card strong {
+  font-size: 16px;
 }
-.roast-chuckle {
-  font: 700 12px monospace;
-  color: #9e5686;
-}
-.honarvar-head {
-  transform-origin: 100px 155px;
-  animation: laugh-head 0.25s ease-in-out infinite alternate;
-}
-.honarvar-mouth {
-  transform-origin: 100px 130px;
-  animation: laugh-mouth 0.19s ease-in-out infinite alternate;
+.card small {
+  font-size: 12px;
+  color: #566982;
+  margin: 0;
+  line-height: 1.35;
 }
 .paused * {
   animation-play-state: paused !important;
 }
-@keyframes laugh-head {
-  from {
-    transform: rotate(-4deg) translateY(1px);
-  }
-  to {
-    transform: rotate(3deg) translateY(-3px);
-  }
-}
-@keyframes laugh-mouth {
-  from {
-    transform: scaleY(0.65);
-  }
-  to {
-    transform: scaleY(1.05);
-  }
-}
 @keyframes review-arrives {
   from {
-    transform: translateX(40px);
+    transform: translateY(24px);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -798,34 +825,18 @@ footer {
   .arena-tag {
     font-size: 8px;
   }
-  #honarvar {
-    right: 9px;
-    bottom: 17px;
-    gap: 0;
+  .cards {
+    grid-template-columns: 1fr;
+    gap: 9px;
   }
-  .honarvar-character {
-    width: 95px;
+  .card {
+    flex-direction: row;
+    text-align: left;
+    padding: 11px 12px;
   }
-  .honarvar-character strong {
-    font-size: 12px;
-  }
-  .honarvar-character small {
-    display: none;
-  }
-  .roast-bubble {
-    padding: 7px 11px;
-    border-width: 2px;
-    border-radius: 11px 11px 2px 11px;
-  }
-  #roast-line {
-    font-size: 16px;
-    margin: 2px 0;
-  }
-  #roast-phase {
-    font-size: 8px;
-  }
-  .roast-chuckle {
-    font-size: 9px;
+  .card-icon svg {
+    width: 28px;
+    height: 28px;
   }
   .terminal {
     min-height: 42px;
@@ -862,9 +873,7 @@ footer {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .honarvar-head,
-  .honarvar-mouth,
-  #honarvar {
+  #upgrade {
     animation: none;
   }
 }

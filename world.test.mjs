@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createGame, update } from "./game.mjs";
+import { createGame, update, chooseUpgrade } from "./public/game.mjs";
 import {
   WORLD_WIDTH,
   WORLD_HEIGHT,
@@ -8,7 +8,7 @@ import {
   HEIGHT,
   getCamera,
   screenToWorld,
-} from "./world.mjs";
+} from "./public/world.mjs";
 
 test("map is four times the original area and camera follows without leaving it", () => {
   assert.equal(WORLD_WIDTH * WORLD_HEIGHT, 960 * 560 * 4);
@@ -80,14 +80,16 @@ test("coffee stays reachable in the current view when exploring distant map area
   assert.ok(c.y > camera.y && c.y < camera.y + HEIGHT);
 });
 test("later phases keep the explored position instead of teleporting to the old arena", () => {
-  const g = createGame();
+  const g = createGame(() => 0.5);
   update(g, { skipIntro: true }, 0);
   g.player.x = 1600;
   g.player.y = 900;
   g.phaseTime = 14.99;
   update(g, {}, 0.02);
   assert.equal(g.status, "intermission");
-  update(g, {}, 3.6);
+  update(g, {}, 2.7);
+  assert.equal(g.status, "upgrade");
+  chooseUpgrade(g, g.choices[0]);
   assert.equal(g.wave, 2);
   assert.equal(g.player.x, 1600);
   assert.equal(g.player.y, 900);

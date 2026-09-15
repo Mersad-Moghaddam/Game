@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+docs
+
+README.md
+
+*.test.mjs
+
+package.json
+package-lock.json
+wrangler.jsonc
+.assetsignore

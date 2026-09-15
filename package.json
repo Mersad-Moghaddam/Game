@@ -1,0 +1,25 @@
+{
+  "name": "g1",
+  "version": "1.0.0",
+  "description": "Marlow pushes an AI-written “small fix” to production after skipping the tests. Bugs escape the monitor. You play as Milo, armed with a patch gun and assigned to clean up Marlow's incident across a scrolling 1920 × 1120 map. After each phase, pick a roguelite upgrade, then face the boss: Sir Deploys-A-Lot.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mersad-Moghaddam/Game.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Mersad-Moghaddam/Game/issues"
+  },
+  "homepage": "https://github.com/Mersad-Moghaddam/Game#readme",
+  "devDependencies": {
+    "wrangler": "^4.131.2"
+  }
+}
