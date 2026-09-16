@@ -211,13 +211,13 @@ try {
   // --- kills spill blood and gibs ---
   const gore = await evalG(() => {
     const g = window.__VEILDRIVE__;
-    const d0 = g.fx.decals.length, p0 = g.fx.p.length;
+    const d0 = g.fx.decals.length, p0 = g.fx.p.length, l0 = g.fx.limbs.length;
     const e = g.enemies.find(x => !x.dead);
     if (!e) return { skipped: true };
     e.damage(99, g, 0);
-    return { dd: g.fx.decals.length - d0, dp: g.fx.p.length - p0 };
+    return { dd: g.fx.decals.length - d0, dp: g.fx.p.length - p0, dl: g.fx.limbs.length - l0 };
   });
-  ok('gore: a kill spills blood, gibs and a pool', gore.skipped || (gore.dd > 0 && gore.dp > 0), JSON.stringify(gore));
+  ok('gore: an overkill dismembers, spills blood and pools', gore.skipped || (gore.dd > 0 && gore.dp > 0 && gore.dl > 0), JSON.stringify(gore));
 
   // --- several gun types fire ---
   const variety = await evalG(() => {

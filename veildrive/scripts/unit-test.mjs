@@ -474,6 +474,17 @@ test('fx: gibs add particles and blood, and blood pools', () => {
   fx.blood(0, 0, 20, 0);
   assert(fx.decals.length > before, 'blood should add decals');
 });
+test('fx: dismemberment gore adds limbs/arterial and respects the toggle', () => {
+  const fx = new FX(); fx.arterial(0, 0, 0); fx.limb(0, 0, 0, 'arm'); fx.headPop(0, 0, 0);
+  assert(fx.limbs.length > 0 && fx.p.length > 0 && fx.decals.length > 0, 'gore should be emitted');
+  const off = new FX(); off.bloodEnabled = false; off.arterial(0, 0, 0); off.limb(0, 0, 0); off.headPop(0, 0, 0);
+  assert.equal(off.limbs.length, 0); assert.equal(off.p.length, 0); assert.equal(off.decals.length, 0);
+});
+test('fx: limbs settle into painted decals', () => {
+  const fx = new FX(); fx.limb(0, 0, 0, 'head'); fx.update(5);
+  assert.equal(fx.limbs.length, 0, 'limbs should expire');
+  assert(fx.decals.length > 0, 'settled limbs should leave a decal');
+});
 test('fx: blood can be disabled', () => {
   const fx = new FX(); fx.bloodEnabled = false; fx.blood(0, 0, 20); fx.gib(0, 0, 0, 10);
   assert.equal(fx.p.length, 0); assert.equal(fx.decals.length, 0);
