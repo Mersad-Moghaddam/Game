@@ -1,5 +1,11 @@
 export const VIRTUAL_W = 960;
 export const VIRTUAL_H = 540;
+// Pixel pipeline: the world renders at VIEW_W x VIEW_H and is upscaled with
+// nearest-neighbour. Simulation and UI coordinates stay in 960x540, so all
+// gameplay math and HUD layout are unchanged.
+export const PIXEL = 2;
+export const VIEW_W = VIRTUAL_W / PIXEL;
+export const VIEW_H = VIRTUAL_H / PIXEL;
 export const SAVE_KEY = 'veildrive-save-v1';
 export const COLORS = {
   void:'#0b0416', ground:'#1a0a33', ground2:'#2a1055', wall:'#3d1263', wallHi:'#8a35d6',

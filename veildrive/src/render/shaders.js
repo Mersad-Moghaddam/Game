@@ -78,6 +78,7 @@ export const CRTShader = {
     uBarrel: { value: 0.06 },
     uSaturation: { value: 1.28 },
     uContrast: { value: 1.06 },
+    uLevels: { value: 30 },
     uGlitch: { value: 0 }
   },
   vertexShader: /* glsl */`
@@ -88,7 +89,7 @@ export const CRTShader = {
     precision highp float;
     varying vec2 vUv;
     uniform sampler2D tDiffuse;
-    uniform float uTime, uAberration, uScanline, uGrain, uVignette, uBarrel, uSaturation, uContrast, uGlitch;
+    uniform float uTime, uAberration, uScanline, uGrain, uVignette, uBarrel, uSaturation, uContrast, uLevels, uGlitch;
     uniform vec2 uResolution;
 
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -114,6 +115,15 @@ export const CRTShader = {
       float lum = dot(col, vec3(0.299, 0.587, 0.114));
       col = mix(vec3(lum), col, uSaturation);
       col = (col - 0.5) * uContrast + 0.5;
+
+      // Palette limiting with a 2x2 ordered dither: gives the limited-colour,
+      // banded pixel-art look instead of smooth photographic gradients.
+      if (uLevels > 1.0) {
+        vec2 pp = floor(vUv * uResolution);
+        float d = (mod(pp.x, 2.0) + mod(pp.y, 2.0) * 2.0) / 4.0 - 0.375;
+        col += d / uLevels;
+        col = floor(col * uLevels + 0.5) / uLevels;
+      }
 
       float vig = smoothstep(1.25, 0.35, length(dir));
       col *= mix(1.0, vig, uVignette);

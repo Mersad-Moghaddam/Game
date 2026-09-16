@@ -64,6 +64,14 @@ try {
   ok('boot: game object present', !boot.missing);
   ok('boot: no console errors on load', errors.length === 0, errors[0] || '');
 
+  // --- pixel pipeline: world renders at half resolution and upscales ---
+  const pix = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    const gl = document.getElementById('gl');
+    return { ow: g.renderer && g.renderer.ow, oh: g.renderer && g.renderer.oh, glw: gl.width, glh: gl.height, avail: !!(g.renderer && g.renderer.available) };
+  });
+  ok('pixel: world renders at 480x270 for chunky upscaling', !pix.avail || (pix.ow === 480 && pix.oh === 270 && pix.glw === 480 && pix.glh === 270), JSON.stringify(pix));
+
   // --- menu: masks, settings, credits ---
   await evalG(() => { const g = window.__VEILDRIVE__; g.save.unlockedMasks = ['MOTH-0', 'RAM-7']; g.save.selectedMask = 'MOTH-0'; });
   await evalG(() => { window.__VEILDRIVE__.menuIndex = 1; });
