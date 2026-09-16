@@ -4,6 +4,9 @@ import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { MASKS, UPGRADES, COLORS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
 import { FX } from '../src/systems/FX.js';
+import { Player } from '../src/entities/Player.js';
+import { Enemy } from '../src/entities/Enemy.js';
+import { Boss } from '../src/entities/Boss.js';
 
 const level = new Level();
 assert.equal(level.w, 1800);
@@ -61,4 +64,17 @@ assert.equal(fx.corpses.length, 40, 'corpse cap enforced');
 fx.markAllPainted();
 assert.equal(fx.unpaintedCount(), 0, 'markAllPainted clears pending corpses too');
 assert.equal(fx.blood({ x: 0, y: 0 }) === undefined, true, 'blood() must not throw');
+
+// Difficulty tuning (noticeably easier, tension kept).
+const hero = new Player(0, 0);
+assert.equal(hero.hp, 5, 'player starts with 5 HP');
+assert.equal(hero.maxHp, 5, 'player max HP is 5');
+assert.equal(makeWeapon('pistol').reserve, makeWeapon('pistol').mag * 3, 'reserve ammo increased');
+const guard = new Enemy(0, 0, 'guard', []);
+assert(guard.reaction >= 0.4, 'guard reaction slowed');
+assert(guard.speed <= 110, 'guard slowed');
+assert(guard.vision <= 360, 'guard vision reduced');
+const brute = new Enemy(0, 0, 'elite', []);
+assert(brute.speed <= 145, 'elite slowed');
+assert.equal(new Boss(0, 0).maxHp, 12, 'boss HP reduced');
 console.log('VEIL//DRIVE smoke checks passed.');
