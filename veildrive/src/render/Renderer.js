@@ -102,6 +102,25 @@ export class Renderer {
     if (this.bloom) this.bloom.enabled = this.postEnabled;
     if (this.crt) this.crt.enabled = this.postEnabled;
   }
+  // Toggle the chunky low-resolution world on/off at runtime. Off renders the
+  // classic crisp 960x540 vector design; on renders 480x270 nearest-upscaled.
+  setPixelMode(on) {
+    if (!this.available) return;
+    const w = on ? VIEW_W : VIRTUAL_W;
+    const h = on ? VIEW_H : VIRTUAL_H;
+    if (this.ow === w && this.oh === h) return;
+    this.ow = w; this.oh = h;
+    for (const layer of [this.albedo, this.emissive]) {
+      layer.canvas.width = w; layer.canvas.height = h;
+      layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      layer.ctx.imageSmoothingEnabled = false;
+      layer.texture.needsUpdate = true;
+    }
+    this.renderer.setSize(w, h, false);
+    this.composer.setSize(w, h);
+    this.crt.uniforms.uResolution.value.set(w, h);
+    this.glitchT = 0;
+  }
   setQuality(q) {
     this.quality = q;
     if (this.bloom) this.bloom.strength = q < 0.5 ? 0.5 : 0.9;

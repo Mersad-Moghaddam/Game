@@ -225,9 +225,8 @@ test('player: gun mods stack', () => {
   UPGRADES.find(u => u.id === 'pierce').apply(p);
   assert(p.damageMul > 1); assert.equal(p.magOf(p.current), base + 3); assert.equal(p.pierce, 1);
 });
-const stubInput = { down: () => false, tap: () => false, mouse: { x: 0, y: 0, left: false, right: false, leftPressed: false, rightPressed: false } };
-function stubGame(player) {
-  return { input: stubInput, screenToWorld: (x, y) => ({ x, y }), level: { moveCircle() {}, blocked: () => false }, fx: { blood() {}, ghost() {} }, emitNoise() {}, audio: { play() {} }, interact() {}, fireWeapon() {}, meleeAttack() {}, throwWeapon() {}, shake() {}, player, renderer: null };
+function stubGame(player, left = false) {
+  return { input: { down: () => false, tap: () => false, mouse: { x: 0, y: 0, left, right: false, leftPressed: false, rightPressed: false } }, screenToWorld: (x, y) => ({ x, y }), level: { moveCircle() {}, blocked: () => false }, fx: { blood() {}, ghost() {} }, emitNoise() {}, audio: { play() {} }, interact() {}, fireWeapon() {}, meleeAttack() {}, throwWeapon() {}, shake() {}, player, renderer: null };
 }
 test('player: reload completes into the right weapon', () => {
   const p = new Player(0, 0); const g = stubGame(p);
@@ -268,6 +267,26 @@ test('player: firing builds bloom/recoil, recoil climbs the aim, and both recove
   assert.equal(shots, 8, 'a shot should consume one round');
   for (let i = 0; i < 60; i++) p.update(0.016, g);
   assert(p.bloom < bloom, 'bloom should recover when not firing');
+});
+test('player: holding attack auto-fires a gun and auto-reloads an empty mag', () => {
+  const p = new Player(0, 0); const g = stubGame(p, true);
+  const startAmmo = p.current.ammo;
+  for (let i = 0; i < 60; i++) p.update(1 / 60, g);
+  assert(p.current.ammo < startAmmo, 'held fire should consume ammo');
+  assert(p.current.ammo > 0, 'should not have emptied in one second');
+  p.current.ammo = 0; p.current.reserve = 18; p.attackCd = 0; p.reloadT = 0;
+  p.update(1 / 60, g);
+  assert(p.reloadT > 0, 'an empty gun must auto-reload on held fire when reserve remains');
+  g.input.mouse.left = false;
+  for (let i = 0; i < 120; i++) p.update(1 / 60, g);
+  assert.equal(p.current.ammo, p.magOf(p.current), 'auto-reload should refill the magazine');
+});
+test('player: holding attack swings a melee weapon repeatedly', () => {
+  const p = new Player(0, 0); const g = stubGame(p, true);
+  p.current = makeWeapon('baton');
+  const before = p.meleeSwings;
+  for (let i = 0; i < 90; i++) p.update(1 / 60, g);
+  assert(p.meleeSwings - before > 1, `held melee should swing repeatedly (${p.meleeSwings - before})`);
 });
 test('player: dash sets cooldown and i-frames', () => {
   const p = new Player(0, 0); const g = stubGame(p);

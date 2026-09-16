@@ -54,6 +54,17 @@ const variance = await page.evaluate(() => {
   return sum2 / n - (sum / n) ** 2;
 });
 
+const glInfo = await page.evaluate(() => {
+  const el = document.getElementById('gl');
+  if (!el || !el.width) return { skipped: true };
+  const c = document.createElement('canvas'); c.width = 160; c.height = 90;
+  const ctx = c.getContext('2d'); ctx.drawImage(el, 0, 0, 160, 90);
+  const d = ctx.getImageData(0, 0, 160, 90).data;
+  let sum = 0, sum2 = 0, n = 0, bright = 0;
+  for (let i = 0; i < d.length; i += 4) { const v = (d[i] + d[i + 1] + d[i + 2]) / 3; sum += v; sum2 += v * v; n++; if (v > 14) bright++; }
+  return { variance: sum2 / n - (sum / n) ** 2, brightRatio: bright / n, w: el.width, h: el.height };
+});
+
 await browser.close();
 server.kill();
 
@@ -63,7 +74,13 @@ if (errors.length) {
 }
 if (!state.available) console.warn('verify-render: WebGL unavailable — canvas fallback in use.');
 if (!(variance > 0)) {
-  console.error('verify-render: frame looked blank (variance 0).');
+  console.error('verify-render: UI overlay looked blank (variance 0).');
   process.exit(1);
 }
-console.log(`verify-render passed. webgl=${state.gl} renderer=${state.available} uiVariance=${variance.toFixed(1)}`);
+if (state.available && glInfo && !glInfo.skipped) {
+  if (!(glInfo.variance > 0) || !(glInfo.brightRatio > 0.05)) {
+    console.error(`verify-render: pixel world looked blank/dark (variance ${glInfo.variance?.toFixed(1)}, bright ${glInfo.brightRatio?.toFixed(3)}).`);
+    process.exit(1);
+  }
+}
+console.log(`verify-render passed. webgl=${state.gl} renderer=${state.available} uiVariance=${variance.toFixed(1)} world=${glInfo?.skipped ? 'n/a' : `${glInfo.w}x${glInfo.h} var ${glInfo.variance.toFixed(1)} bright ${glInfo.brightRatio.toFixed(3)}`}`);
