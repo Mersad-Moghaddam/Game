@@ -71,7 +71,7 @@ export class Game{
    if(this.level.objective&&!this.level.objective.taken&&dist(this.player,this.level.objective)<48){this.level.objective.taken=true;this.finishRun();return}
    if(!kick){let best=null,bd=48;for(const p of this.level.pickups){if(p.taken)continue;const d=dist(this.player,p);if(d<bd){best=p;bd=d}}if(best){best.taken=true;this.player.equip(best.weapon,this);return}}
    const d=this.level.nearestDoor(this.player,58);if(d){this.level.openDoor(d,kick);this.audio.play('door');this.emitNoise(d.x,d.y,kick?340:80,kick?'breach':'door');if(kick){this.shake(5);for(const e of this.enemies){const c={x:d.x+d.w/2,y:d.y+d.h/2};if(!e.dead&&dist(e,c)<62)e.damage(2+this.player.breachBonus,this,this.player.a,280+this.player.breachBonus*70)}}}}
- onEnemyKilled(e,angle){this.killCount++;const wasStealth=e.state!=='COMBAT';if(wasStealth)this.stealthKills++;this.fx.blood(e.x,e.y,12,angle);this.fx.burst(e.x,e.y,8,'#c7a56e',110,.25,2);this.audio.play('kill');this.shake(4);this.hitStop(.032);this.addCombo(wasStealth?175:120);if(Math.random()<.48&&e.weapon)this.level.pickups.push({x:e.x,y:e.y,weapon:makeWeapon(e.weapon.id)});}
+ onEnemyKilled(e,angle){this.killCount++;const wasStealth=e.state!=='COMBAT';if(wasStealth)this.stealthKills++;this.fx.blood(e.x,e.y,14,angle);this.fx.burst(e.x,e.y,10,'#ff7a1a',120,.3,2);this.fx.corpses.push({x:e.x,y:e.y,a:angle});while(this.fx.corpses.length>40)this.fx.corpses.shift();this.fx.pool(e.x,e.y,1.5);this.audio.play('kill');this.shake(4);this.hitStop(.032);this.addCombo(wasStealth?175:120);if(Math.random()<.48&&e.weapon)this.level.pickups.push({x:e.x,y:e.y,weapon:makeWeapon(e.weapon.id)});}
  onBossKilled(b){this.fx.blood(b.x,b.y,28,this.player.a);this.fx.burst(b.x,b.y,24,'#d4b46a',230,.7,5);this.score+=1800;this.addCombo(500);this.shake(12);this.hitStop(.07);}
  addCombo(base){this.combo++;this.comboT=2.25+this.player.comboBonus;this.maxCombo=Math.max(this.maxCombo,this.combo);this.score+=Math.round(base*(1+Math.min(3,this.combo*.18)));}
  hitStop(sec){this.freeze=Math.max(this.freeze||0,sec)}
@@ -94,7 +94,9 @@ export class Game{
     for(const t of this.thrown){c.save();c.translate(t.x,t.y);c.rotate(t.a);c.fillStyle=t.weapon.color;c.fillRect(-10,-3,20,6);c.restore()}
     for(const h of this.hazards){c.save();c.translate(h.x,h.y);c.rotate(h.a||0);c.fillStyle='#8f6c4e';c.fillRect(-9,-7,18,14);c.restore()}
     for(const e of this.enemies)e.draw(c,this.debug);if(this.boss)this.boss.draw(c);this.fx.draw(c);if(!this.player.dead)this.player.draw(c);c.restore();
-    g.save();g.globalCompositeOperation='lighter';g.translate(ox,oy);this.fx.drawGlow(g);for(const e of this.enemies)e.drawGlow(g);if(this.boss)this.boss.drawGlow(g);if(!this.player.dead)this.player.drawGlow(g);g.restore();
+    g.save();g.globalCompositeOperation='lighter';g.translate(ox,oy);
+    for(const b of this.projectiles){g.strokeStyle=b.color;g.lineWidth=3;g.globalAlpha=.45;g.beginPath();g.moveTo(b.px,b.py);g.lineTo(b.x,b.y);g.stroke()}g.globalAlpha=1;
+    this.fx.drawGlow(g);for(const e of this.enemies)e.drawGlow(g);if(this.boss)this.boss.drawGlow(g);if(!this.player.dead)this.player.drawGlow(g);g.restore();
     this.pushLights();this.renderer.render();this.drawHUD(ui);if(this.state==='upgrade')this.drawUpgrade(ui);if(this.state==='paused')this.drawPause(ui);if(this.player.dead)this.drawDeath(ui);if(this.debug)this.drawDebug(ui);
   }
   drawMenuWorld(c){c.fillStyle=COLORS.void;c.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);c.fillStyle=COLORS.violet;c.globalAlpha=.12;c.fillRect(0,300,VIRTUAL_W,240);c.globalAlpha=1;}
