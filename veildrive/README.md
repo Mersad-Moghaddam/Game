@@ -82,7 +82,7 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 - Explosive environmental barrels and persistent enemy bodies that can alert other guards
 - Combo/chain scoring and end-of-mission grading
 - LocalStorage versioned save for settings, run count, best score and rank
-- Settings/accessibility controls for volume, screen shake, blood, graphics quality, post effects, **PIXEL WORLD** (switch between the HM2 pixel look and the crisp 960×540 design), flashing and high-contrast cursor
+- Settings/accessibility controls for volume, screen shake, blood, graphics quality, post effects, **PIXEL WORLD** (off by default — the crisp 960×540 design; on enables the low-res Hotline Miami 2 pixel look), flashing and high-contrast cursor
 - Pause, focus loss handling, instant mission rewind on death
 - Developer/debug tools
 
@@ -93,7 +93,7 @@ The game is simulated entirely in 2D and rendered through a GPU pipeline with a 
 - **Three.js (r186)** is vendored under `vendor/` and loaded with an import map in `index.html` — no bundler and no CDN. `scripts/build.mjs` copies `vendor/` into `dist/`.
 - **Layer model.** Each frame the existing Canvas-2D drawing code renders two 960×540 offscreen canvases: *albedo* (the lit scene) and *emissive* (glow only). Both become `CanvasTexture`s on full-screen quads in an `OrthographicCamera` scene.
 - **Lighting.** A custom `ShaderPass` (`src/render/shaders.js`) combines `albedo × lights + emissive` using up to 16 mood-coloured lights plus ambient. Lights flicker and brighten on the beat; `src/render/mood.js` holds the four mood palettes (`sunset`, `violet`, `toxic`, `blood`) used per zone.
-- **Pixel pipeline.** The world renders internally at **480×270** (`PIXEL = 2`) and is upscaled with nearest-neighbour, so pixels are chunky and crisp like Hotline Miami 2. Simulation and HUD coordinates stay 960×540 (layer contexts get a `1/PIXEL` scale), so no gameplay math changed. The UI canvas stays 960×540 so text reads clearly. The **PIXEL WORLD** setting toggles this at runtime: off restores the previous crisp 1:1 design and on returns to the pixel look.
+- **Pixel pipeline (opt-in).** The default design is crisp 960×540. With **PIXEL WORLD** on, the world instead renders internally at **480×270** (`PIXEL = 2`) and is upscaled with nearest-neighbour, giving chunky Hotline Miami 2 pixels. Simulation and HUD coordinates stay 960×540 either way (layer contexts get a `1/PIXEL` scale), so no gameplay math changes and the UI stays sharp. The setting toggles at runtime.
 - **Post.** `EffectComposer`: render → lighting → `UnrealBloomPass` (neon bloom) → CRT/VHS pass (chromatic aberration, scanlines, barrel distortion, vignette, grain, glitch bursts on damage/explosions) → `OutputPass`. A palette-quantise + 2×2 ordered dither step gives the limited-colour, banded pixel-art look.
 - **UI overlay.** HUD, menus, results and upgrade screens draw to a separate `#ui` 2D canvas stacked above the WebGL canvas, so text stays crisp and undistorted.
 - **Static bake.** The environment is baked once into a world-sized canvas (`Level.bake`) and blitted per frame; blood pools, corpses and broken props are painted into it and it is re-baked only when something static changes.

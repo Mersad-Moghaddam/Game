@@ -64,27 +64,29 @@ try {
   ok('boot: game object present', !boot.missing);
   ok('boot: no console errors on load', errors.length === 0, errors[0] || '');
 
-  // --- pixel pipeline: world renders at half resolution and upscales ---
+  // --- crisp 960x540 is the default design ---
   const pix = await evalG(() => {
     const g = window.__VEILDRIVE__;
     const gl = document.getElementById('gl');
-    return { ow: g.renderer && g.renderer.ow, oh: g.renderer && g.renderer.oh, glw: gl.width, glh: gl.height, avail: !!(g.renderer && g.renderer.available) };
+    return { ow: g.renderer && g.renderer.ow, oh: g.renderer && g.renderer.oh, glw: gl.width, glh: gl.height, pixelSetting: g.settings.pixel, avail: !!(g.renderer && g.renderer.available) };
   });
-  ok('pixel: world renders at 480x270 for chunky upscaling', !pix.avail || (pix.ow === 480 && pix.oh === 270 && pix.glw === 480 && pix.glh === 270), JSON.stringify(pix));
+  ok('pixel: crisp 960x540 is the default', !pix.avail || (pix.ow === 960 && pix.oh === 540 && pix.glw === 960 && pix.glh === 540 && pix.pixelSetting === false), JSON.stringify(pix));
 
-  // --- the PIXEL WORLD setting switches between the HM2 pixel look and the
-  //     previous crisp 960x540 design at runtime ---
+  // --- the PIXEL WORLD setting switches between the crisp design and the
+  //     HM2 480x270 pixel look at runtime, then leaves the default in place ---
   const pixTog = await evalG(() => {
     const g = window.__VEILDRIVE__;
     if (!(g.renderer && g.renderer.available)) return { skipped: true };
+    g.settings.pixel = true; g.applyRenderSettings();
     const on = g.renderer.ow;
     g.settings.pixel = false; g.applyRenderSettings();
     const off = g.renderer.ow;
     g.settings.pixel = true; g.applyRenderSettings();
     const back = g.renderer.ow;
-    return { on, off, back };
+    g.settings.pixel = false; g.applyRenderSettings();
+    return { on, off, back, restored: g.renderer.ow };
   });
-  ok('pixel: PIXEL WORLD toggles between crisp and pixel rendering', pixTog.skipped || (pixTog.on === 480 && pixTog.off === 960 && pixTog.back === 480), JSON.stringify(pixTog));
+  ok('pixel: PIXEL WORLD toggles between pixel and crisp rendering', pixTog.skipped || (pixTog.on === 480 && pixTog.off === 960 && pixTog.back === 480 && pixTog.restored === 960), JSON.stringify(pixTog));
 
   // --- menu: masks, settings, credits ---
   await evalG(() => { const g = window.__VEILDRIVE__; g.save.unlockedMasks = ['MOTH-0', 'RAM-7']; g.save.selectedMask = 'MOTH-0'; });
