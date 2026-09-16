@@ -95,7 +95,21 @@ assert.equal(hero.magOf(hero.current), baseMag + 3, 'EXTENDED MAG adds 3 rounds'
 UPGRADES.find(u => u.id === 'pierce').apply(hero);
 assert.equal(hero.pierce, 1, 'ARMOR PIERCING adds a pierce');
 
-const fakeCtx = { save(){}, restore(){}, fillRect(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, fill(){}, arc(){}, ellipse(){}, strokeRect(){}, setLineDash(){}, fillText(){}, translate(){}, rotate(){}, clearRect(){}, globalAlpha: 1, globalCompositeOperation: '' };
+const fakeCtx = { save(){}, restore(){}, fillRect(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, fill(){}, arc(){}, ellipse(){}, strokeRect(){}, setLineDash(){}, fillText(){}, translate(){}, rotate(){}, clearRect(){}, closePath(){}, globalAlpha: 1, globalCompositeOperation: '' };
+
+// Enemy walk animation must be driven by movement, not time: idle enemies
+// used to "shake" in place because their walk cycle always advanced.
+const stubG = {
+  level: { blocked: () => false, moveCircle: (e, dx, dy) => { e.x += dx; e.y += dy; }, lineBlocked: () => false },
+  player: { x: 0, y: 0, dead: false, vx: 0, vy: 0 },
+  enemies: [], aiStep: 0.1, enemyShoot() {}, fx: {}, audio: {}
+};
+const idleFoe = new Enemy(0, 0, 'guard', []);
+for (let i = 0; i < 8; i++) idleFoe.update(0.1, stubG);
+assert.equal(idleFoe.animT, 0, 'idle enemy must not animate in place');
+const walkFoe = new Enemy(0, 0, 'guard', [{ x: 200, y: 0 }]);
+for (let i = 0; i < 8; i++) walkFoe.update(0.1, stubG);
+assert(walkFoe.animT > 0, 'moving enemy must animate');
 assert(MISSION_COUNT >= 5, 'at least 5 missions in the campaign');
 assert.equal(MISSIONS.length, MISSION_COUNT);
 for (const m of MISSIONS) {
@@ -103,6 +117,7 @@ for (const m of MISSIONS) {
   assert(m.w > 400 && m.h > 400, `${m.id} size`);
   assert(m.spawn && m.exit && m.goal && m.goal.type, `${m.id} spawn/exit/goal`);
   assert(['sunset', 'violet', 'toxic', 'blood'].includes(m.mood), `${m.id} mood`);
+  assert(typeof m.entryLabel === 'string' && typeof m.entryKind === 'string', `${m.id} entry-room metadata`);
   assert(Array.isArray(m.walls) && m.walls.length > 3, `${m.id} walls`);
   assert(m.enemies.length >= 4, `${m.id} enemies`);
   for (const w of m.walls) assert(w.x >= 0 && w.y >= 0 && w.x + w.w <= m.w && w.y + w.h <= m.h, `${m.id} wall in bounds`);

@@ -2,6 +2,7 @@ import { circleRect, segRect, dist } from '../core/math.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { COLORS } from '../data/config.js';
 import { moodColor } from '../render/mood.js';
+import { drawWeaponArt } from '../render/weapons-art.js';
 import { MISSIONS } from '../data/missions.js';
 
 const hash2 = (x, y) => {
@@ -67,6 +68,27 @@ export class Level{
     ctx.save();ctx.globalAlpha=.13;ctx.fillStyle='#000';
     for(let i=0;i<220;i++){const x=hash2(i,41)*this.w,y=hash2(i,43)*this.h,r=2+hash2(i,47)*10;ctx.beginPath();ctx.ellipse(x,y,r,r*.7,0,0,Math.PI*2);ctx.fill()}
     ctx.restore();
+    // entry-room dressing: mat, floor sign, kind glyph and an arrow to the door
+    const sp=this.def.spawn;
+    if(sp){
+      ctx.save();
+      ctx.fillStyle=moodColor(this.mood,'ground2',0);ctx.fillRect(sp.x-34,sp.y-24,68,48);
+      ctx.strokeStyle=moodColor(this.mood,'wallHi',0);ctx.lineWidth=2;ctx.strokeRect(sp.x-34,sp.y-24,68,48);
+      ctx.strokeStyle=COLORS.bone;ctx.globalAlpha=.22;ctx.lineWidth=2;
+      for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(sp.x-16,sp.y+i*11);ctx.lineTo(sp.x,sp.y+i*11-6);ctx.lineTo(sp.x+16,sp.y+i*11);ctx.stroke()}
+      ctx.globalAlpha=1;
+      let best=null,bd=1e9;for(const d of this.doors){const dd=Math.hypot(d.x+d.w/2-sp.x,d.y+d.h/2-sp.y);if(dd<bd){best=d;bd=dd}}
+      if(best){const ang=Math.atan2(best.y+best.h/2-sp.y,best.x+best.w/2-sp.x);ctx.save();ctx.translate(sp.x,sp.y);ctx.rotate(ang);ctx.fillStyle=COLORS.cyan;ctx.beginPath();ctx.moveTo(42,0);ctx.lineTo(26,-9);ctx.lineTo(26,9);ctx.closePath();ctx.fill();ctx.fillRect(-6,-3,32,6);ctx.restore()}
+      const k=this.def.entryKind;
+      ctx.fillStyle=COLORS.cyan;
+      if(k==='elevator'){for(let i=0;i<3;i++)ctx.fillRect(sp.x-30+i*6,sp.y+16,4,12)}
+      else if(k==='stairs'){for(let i=0;i<3;i++)ctx.fillRect(sp.x-30+i*5,sp.y+16+i*4,9,4)}
+      else{ctx.strokeStyle=COLORS.cyan;ctx.lineWidth=2;ctx.strokeRect(sp.x-30,sp.y+16,14,12)}
+      ctx.fillStyle=COLORS.ink;ctx.fillRect(sp.x-42,sp.y-48,84,18);
+      ctx.strokeStyle=COLORS.hotPink;ctx.lineWidth=1.5;ctx.strokeRect(sp.x-42,sp.y-48,84,18);
+      ctx.fillStyle=COLORS.bone;ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText(this.def.entryLabel||'ENTRY',sp.x,sp.y-35);ctx.textAlign='left';
+      ctx.restore();
+    }
     // doors
     for(const d of this.doors){if(d.open||d.broken){ctx.strokeStyle=COLORS.orange;ctx.globalAlpha=.5;ctx.setLineDash([6,5]);ctx.strokeRect(d.x+.5,d.y+.5,d.w-1,d.h-1);ctx.setLineDash([]);ctx.globalAlpha=1;continue}ctx.fillStyle=COLORS.wall;ctx.fillRect(d.x,d.y,d.w,d.h);ctx.strokeStyle=moodColor(this.mood,'wallHi',0);ctx.lineWidth=2;ctx.strokeRect(d.x+3,d.y+3,d.w-6,d.h-6)}
     // walls
@@ -89,7 +111,7 @@ export class Level{
     ctx.restore();
   }
   drawItems(ctx){
-    for(const p of this.pickups){if(p.taken)continue;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(-.35);ctx.fillStyle=p.weapon.color;ctx.fillRect(-14,-3,28,6);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fillRect(-10,-5,6,2);ctx.restore();}
+    for(const p of this.pickups){if(p.taken)continue;ctx.save();ctx.translate(p.x,p.y);ctx.globalAlpha=.3;ctx.fillStyle=p.weapon.color;ctx.beginPath();ctx.arc(0,0,15,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.rotate(-.42);drawWeaponArt(ctx,p.weapon,0.85);ctx.restore();}
     if(this.objective&&!this.objective.taken){ctx.save();ctx.translate(this.objective.x,this.objective.y);ctx.globalAlpha=.3;ctx.fillStyle=COLORS.orange;ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.rotate(-.35);ctx.fillStyle=COLORS.orange;ctx.fillRect(-11,-7,22,14);ctx.fillStyle=COLORS.ink;ctx.fillRect(-7,-4,5,8);ctx.fillRect(2,-4,5,8);ctx.restore();}
     if(this.exit&&this.exit.active){ctx.save();ctx.translate(this.exit.x,this.exit.y);ctx.globalAlpha=.35;ctx.fillStyle=COLORS.cyan;ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=COLORS.cyan;ctx.lineWidth=3;ctx.strokeRect(-17,-17,34,34);ctx.fillStyle=COLORS.bone;ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('EXIT',0,4);ctx.textAlign='left';ctx.restore();}
   }
