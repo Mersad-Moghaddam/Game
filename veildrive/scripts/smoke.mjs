@@ -3,6 +3,7 @@ import { Level } from '../src/world/Level.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { MASKS, UPGRADES, COLORS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
+import { MISSIONS, MISSION_COUNT } from '../src/data/missions.js';
 import { FX } from '../src/systems/FX.js';
 import { Player } from '../src/entities/Player.js';
 import { Enemy } from '../src/entities/Enemy.js';
@@ -12,12 +13,14 @@ const level = new Level();
 assert.equal(level.w, 1800);
 assert.equal(level.h, 1100);
 assert.equal(typeof level.bake, 'function', 'Level.bake missing');
+assert.equal(typeof level.findOpen, 'function', 'Level.findOpen missing');
+assert.equal(typeof level.drawItems, 'function', 'Level.drawItems missing');
 assert.equal(level.dirty, false, 'level starts clean');
 level.markDirty();
 assert.equal(level.dirty, true, 'markDirty sets dirty');
 assert.equal(typeof level.zoneAt, 'function', 'Level.zoneAt missing');
 assert.equal(['sunset', 'violet', 'toxic', 'blood'].includes(level.zoneAt(400, 300)), true, 'zoneAt returns a mood');
-assert.equal(level.zoneAt(100, 100), 'sunset', 'exterior is sunset');
+assert.equal(level.zoneAt(100, 100), level.mood, 'zoneAt returns the mission mood');
 assert(level.doors.length >= 8, 'expected multiple tactical doors');
 assert.equal(new Set(level.doors.map(d => `${d.x}:${d.y}:${d.w}:${d.h}`)).size, level.doors.length, 'duplicate doors');
 assert.equal(level.blocked(340, 465, 10), false, 'front breach gap should be traversable');
@@ -65,16 +68,39 @@ fx.markAllPainted();
 assert.equal(fx.unpaintedCount(), 0, 'markAllPainted clears pending corpses too');
 assert.equal(fx.blood({ x: 0, y: 0 }) === undefined, true, 'blood() must not throw');
 
-// Difficulty tuning (noticeably easier, tension kept).
+// Brutal tuning (original-HM pace) and the mission campaign.
 const hero = new Player(0, 0);
-assert.equal(hero.hp, 5, 'player starts with 5 HP');
-assert.equal(hero.maxHp, 5, 'player max HP is 5');
-assert.equal(makeWeapon('pistol').reserve, makeWeapon('pistol').mag * 3, 'reserve ammo increased');
+assert.equal(hero.hp, 3, 'player starts with 3 HP');
+assert.equal(hero.maxHp, 3, 'player max HP is 3');
+assert(hero.moveSpeed >= 260, 'player moves fast');
+assert.equal(makeWeapon('pistol').reserve, makeWeapon('pistol').mag * 2, 'reserve ammo x2');
 const guard = new Enemy(0, 0, 'guard', []);
-assert(guard.reaction >= 0.4, 'guard reaction slowed');
-assert(guard.speed <= 110, 'guard slowed');
-assert(guard.vision <= 360, 'guard vision reduced');
-const brute = new Enemy(0, 0, 'elite', []);
-assert(brute.speed <= 145, 'elite slowed');
-assert.equal(new Boss(0, 0).maxHp, 12, 'boss HP reduced');
+assert.equal(guard.hp, 1, 'grunts die in one hit');
+assert(guard.reaction <= 0.35, 'enemies react fast');
+assert(guard.speed >= 115, 'enemies move fast');
+assert.equal(new Enemy(0, 0, 'elite', []).hp, 2, 'elites take two hits');
+assert.equal(new Boss(0, 0).maxHp, 16, 'boss HP');
+
+const fakeCtx = { save(){}, restore(){}, fillRect(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, fill(){}, arc(){}, ellipse(){}, strokeRect(){}, setLineDash(){}, fillText(){}, translate(){}, rotate(){}, clearRect(){}, globalAlpha: 1, globalCompositeOperation: '' };
+assert(MISSION_COUNT >= 5, 'at least 5 missions in the campaign');
+assert.equal(MISSIONS.length, MISSION_COUNT);
+for (const m of MISSIONS) {
+  assert(typeof m.id === 'string' && typeof m.name === 'string' && typeof m.sub === 'string', `${m.id} metadata`);
+  assert(m.w > 400 && m.h > 400, `${m.id} size`);
+  assert(m.spawn && m.exit && m.goal && m.goal.type, `${m.id} spawn/exit/goal`);
+  assert(['sunset', 'violet', 'toxic', 'blood'].includes(m.mood), `${m.id} mood`);
+  assert(Array.isArray(m.walls) && m.walls.length > 3, `${m.id} walls`);
+  assert(m.enemies.length >= 4, `${m.id} enemies`);
+  for (const w of m.walls) assert(w.x >= 0 && w.y >= 0 && w.x + w.w <= m.w && w.y + w.h <= m.h, `${m.id} wall in bounds`);
+  for (const p of m.props) assert(p.x >= 0 && p.y >= 0 && p.x + p.w <= m.w && p.y + p.h <= m.h, `${m.id} prop in bounds`);
+  const built = new Level(m);
+  assert.equal(built.w, m.w);
+  assert.equal(built.exit.x, m.exit.x);
+  built.bake(fakeCtx);
+}
+for (const t of ['eliminate', 'retrieve', 'target', 'boss']) {
+  assert(MISSIONS.some(m => m.goal.type === t), `campaign has a ${t} mission`);
+}
+assert.equal(MISSIONS[0].id, 'motel', 'the original motel map is mission 1');
+assert(MISSIONS[0].w === 1800 && MISSIONS[0].h === 1100, 'mission 1 keeps the room-to-room map');
 console.log('VEIL//DRIVE smoke checks passed.');

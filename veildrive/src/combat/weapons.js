@@ -9,4 +9,4 @@ export const WEAPONS = {
   smg:{id:'smg',name:'Compact SMG',kind:'gun',damage:1,rate:0.085,range:700,spread:0.09,mag:22,reload:1.65,noise:470,knock:55,color:'#8a9299'},
   revolver:{id:'revolver',name:'Heavy Revolver',kind:'gun',damage:2,rate:0.46,range:950,spread:0.02,mag:6,reload:1.9,noise:560,knock:180,color:'#c8baa0'}
 };
-export function makeWeapon(id){ const d=WEAPONS[id]; return {...d, ammo:d.mag ?? null, reserve:d.mag ? d.mag*3 : null}; }
+export function makeWeapon(id){ const d=WEAPONS[id]; return {...d, ammo:d.mag ?? null, reserve:d.mag ? d.mag*2 : null}; }

@@ -46,6 +46,12 @@ The player is **MOTH-0**, a lean masked courier wearing a faded teal bomber with
 
 The boss, **THE PORTER**, wears a keyhole-shaped service mask and changes combat behavior across three phases: ranged pressure, thrown debris, then telegraphed wall-crash charges that create vulnerability windows.
 
+## Campaign
+
+Five missions play back-to-back: **MOTEL STATIC** (the original room-to-room motel), **THE NEON ROOM**, **COLD STORAGE**, **LAST TRAIN** and **THE PORTER**. Each is a data-driven single floor (`src/data/missions.js`) with its own neon mood, enemy roster and objective — clear the floor, retrieve an item, assassinate the marked target, or kill the boss. Finishing the objective lights an **EXIT**; reaching it clears the mission, then a short interlude and an upgrade choice lead into the next mission. Dying rewinds the current mission instantly. Clearing all five shows the campaign grade.
+
+Combat is intentionally brutal and fast: the player has 3 HP, grunts die in a single hit, elites take two, and enemies react quickly.
+
 ## Implemented systems
 
 - 60 FPS delta-time game loop and responsive 16:9 letterboxing
@@ -62,7 +68,7 @@ The boss, **THE PORTER**, wears a keyhole-shaped service mask and changes combat
 - Enemy archetypes: guard, brawler, shotgunner, hunter/flanker, elite
 - Reactive procedural audio through Web Audio API
 - Dynamic exploration/combat audio intensity
-- Two-stage encounter structure with randomized enemy composition and upgrade choice
+- Five-mission linear campaign with distinct compact floors (eliminate / retrieve / assassinate / boss objectives) and instant per-mission restart
 - Upgrade synergies including reload, spread, dash, melee, combo, stealth and ricochet upgrades
 - Multi-phase boss with telegraphed vulnerability mechanic
 - Context executions
@@ -107,14 +113,16 @@ src/
   combat/
     weapons.js    Data-driven weapon definitions and runtime weapon creation
   world/
-    Level.js      Motel layout, doors, props, pickups, collisions and line of sight
+    Level.js      Data-driven mission floor: layout, doors, props, pickups, collisions and line of sight
   systems/
     FX.js         Particles, blood decals, afterimages and transient flashes
   render/
     Renderer.js   Three.js renderer, layer quads, EffectComposer, fallback probe
     shaders.js    GLSL for the lighting and CRT/VHS passes
     mood.js       Per-zone neon palettes and beat-pulse colour helper
+    humanoid.js   Shared Hotline Miami-style humanoid sprite/animation renderer
   data/
+    missions.js   The five mission definitions (floors, rosters, objectives, moods)
     config.js     Settings, palette and upgrade definitions
 ```
 
