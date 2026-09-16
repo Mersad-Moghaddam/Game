@@ -64,7 +64,7 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 - Magazine + reserve ammunition
 - Door opening and violent breaches
 - Breakable furniture/glass and environmental collision
-- Blood decals, particles, debris, impact effects, afterimages and screen shake
+- Blood decals, growing pools, gibs, particles, debris, impact effects, afterimages and heavy screen shake
 - Hit stop for kills, melee impacts, executions and boss death
 - Enemy states: patrol, investigate, search, combat, stunned
 - Vision cone, line of sight, hearing, reaction delay and local alert propagation
@@ -72,6 +72,7 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 - Reactive procedural audio through Web Audio API
 - Dynamic exploration/combat audio intensity
 - Five-mission linear campaign with distinct compact floors (eliminate / retrieve / assassinate / boss objectives) and instant per-mission restart
+- Spawns and respawns on a dressed entry mat, facing the breach door, with a brief spawn shield
 - Upgrade synergies including reload, spread, dash, melee, combo, stealth and ricochet upgrades
 - Multi-phase boss with telegraphed vulnerability mechanic
 - Context executions
@@ -85,19 +86,23 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 
 ## Rendering (Three.js / Hotline Miami look)
 
-The game is simulated entirely in 2D and rendered through a GPU pipeline with a Hotline Miami visual style: saturated neon, palette that pulses with the music beat, heavy CRT/VHS post-processing, patterned floors and exaggerated gore. Feedback is deliberately loud — heavy screen shake on firing, hits, kills, breaches and explosions, with expanding shockwave rings, big muzzle flashes, hit-stop and glitch bursts on impact.
+The game is simulated entirely in 2D and rendered through a GPU pipeline with a Hotline Miami visual style: saturated neon, palette that pulses with the music beat, heavy CRT/VHS post-processing, patterned floors and exaggerated gore. Feedback is deliberately loud — heavy screen shake on firing, hits, kills, breaches and explosions, with expanding shockwave rings, big muzzle flashes, hit-stop and glitch bursts on impact. Kills burst into blood, gibs and growing floor pools, and taking a hit flashes a red damage vignette.
 
 - **Three.js (r186)** is vendored under `vendor/` and loaded with an import map in `index.html` — no bundler and no CDN. `scripts/build.mjs` copies `vendor/` into `dist/`.
 - **Layer model.** Each frame the existing Canvas-2D drawing code renders two 960×540 offscreen canvases: *albedo* (the lit scene) and *emissive* (glow only). Both become `CanvasTexture`s on full-screen quads in an `OrthographicCamera` scene.
 - **Lighting.** A custom `ShaderPass` (`src/render/shaders.js`) combines `albedo × lights + emissive` using up to 16 mood-coloured lights plus ambient. Lights flicker and brighten on the beat; `src/render/mood.js` holds the four mood palettes (`sunset`, `violet`, `toxic`, `blood`) used per zone.
 - **Post.** `EffectComposer`: render → lighting → `UnrealBloomPass` (neon bloom) → CRT/VHS pass (chromatic aberration, scanlines, barrel distortion, vignette, grain, glitch bursts on damage/explosions) → `OutputPass`.
 - **UI overlay.** HUD, menus, results and upgrade screens draw to a separate `#ui` 2D canvas stacked above the WebGL canvas, so text stays crisp and undistorted.
-- **Static bake.** The environment is baked once into an 1800×1100 canvas (`Level.bake`) and blitted per frame; blood pools, corpses and broken props are painted into it and it is re-baked only when something static changes.
+- **Static bake.** The environment is baked once into a world-sized canvas (`Level.bake`) and blitted per frame; blood pools, corpses and broken props are painted into it and it is re-baked only when something static changes.
 - **Fallback.** If WebGL is unavailable, `main.js` skips Three.js entirely and the original Canvas-2D path renders the game, so it always runs.
 
 Debug/quality: `settings.post` toggles the bloom/CRT chain; `settings.quality` reduces lights and effects; `prefers-reduced-motion` disables scanline roll, grain and glitch. The internal resolution stays 960×540 (no pixelation downscale).
 
-`npm run verify` boots the dev server in headless Chromium (if Playwright is installed) and asserts there are no console errors, a WebGL context exists, and the frame renders.
+## Testing
+
+- `npm test` — unit suite (Node, no browser): math, save persistence, weapon/upgrade data, mood palettes, level collision and line-of-sight, every mission's structural invariants (clear empty entry room, a door within reach, no pickup shadows a door, and every enemy/waypoint/exit/objective reachable by a player-sized flood fill), player/enemy/boss behaviour, gore caps and the art helpers.
+- `npm run test:scenario` — end-to-end scenarios in headless Chromium (skips if Playwright is absent): boot, menu/settings/credits, spawn on the entry mat facing the door with a shield, firing, kills, pickups, barrels, objective → exit → interlude → upgrade → next mission, the boss finale, death respawn on the entry mat, save persistence across reload, pause, idle-still enemies, resize, and the no-WebGL Canvas fallback.
+- `npm run verify` — a fast headless render probe (WebGL context, non-blank frame, no console errors).
 
 ## Architecture
 

@@ -130,6 +130,8 @@ export function drawHuman(ctx, o = {}) {
   ctx.fillStyle = accent;
   ctx.fillRect(tx + tw - 6, ty + th - 4.2, 2.4, 3);
 
+  // coat tail (elite)
+  if (o.coat) { ctx.fillStyle = outline; rrect(ctx, tx - 1, ty + th - 5, tw + 2, 16, 5); ctx.fill(); ctx.fillStyle = shirtDark; rrect(ctx, tx, ty + th - 4, tw, 14, 4); ctx.fill(); }
   // near leg
   const nearLeg = limb(ctx, -2, hipY, Math.PI / 2 + swing * 0.45, 7, Math.PI / 2 + swing * 0.45 - 0.1, 6, lw, pants, outline);
   foot(ctx, nearLeg, shoe, outline, lw - 1);

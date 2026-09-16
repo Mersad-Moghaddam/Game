@@ -31,6 +31,9 @@ export class Level{
   }
   markDirty(){ this.dirty = true; }
   zoneAt(){ return this.mood; }
+  // Direction from the spawn toward the entry-room door, used so the player
+  // always starts (and respawns) facing the way out.
+  entryFacing(){ let best=null,bd=Infinity; for(const d of this.doors){const dd=Math.hypot(d.x+d.w/2-this.def.spawn.x,d.y+d.h/2-this.def.spawn.y);if(dd<bd){bd=dd;best=d}} return best?Math.atan2(best.y+best.h/2-this.def.spawn.y,best.x+best.w/2-this.def.spawn.x):0 }
   findOpen(x, y, r = 12){
     if(!this.blocked(x, y, r)) return { x, y };
     for(let ring = 24; ring <= 260; ring += 24){

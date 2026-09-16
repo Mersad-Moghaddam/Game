@@ -9,7 +9,7 @@ export class Player{
   magOf(w){return Math.max(1,(w.mag||0)+this.magBonus)}
   update(dt,g){
     const i=g.input;const ox=this.x,oy=this.y;this.attackCd=Math.max(0,this.attackCd-dt);this.dashCd=Math.max(0,this.dashCd-dt);this.invuln=Math.max(0,this.invuln-dt);this.hitFlash=Math.max(0,this.hitFlash-dt);
-    const mw=g.screenToWorld(i.mouse.x,i.mouse.y);this.a=Math.atan2(mw.y-this.y,mw.x-this.x);
+    const mw=g.screenToWorld(i.mouse.x,i.mouse.y);if(i.mouse.moved)this.a=Math.atan2(mw.y-this.y,mw.x-this.x);
     if(this.reloadT>0){this.reloadT-=dt;if(this.reloadT<=0){const rw=this.reloadWeapon;const mag=rw?this.magOf(rw):0;if(rw&&rw.kind==='gun'&&rw.ammo<mag&&rw.reserve>0){const need=mag-rw.ammo,take=Math.min(need,rw.reserve);rw.ammo+=take;rw.reserve-=take;g.audio.play('reload')}this.reloadWeapon=null}}
     let x=(i.down('KeyD')?1:0)-(i.down('KeyA')?1:0),y=(i.down('KeyS')?1:0)-(i.down('KeyW')?1:0);const n=norm(x,y);const moving=!!(x||y);if(!moving){n.x=0;n.y=0}
     this.animT+=(moving?9:2)*dt;
@@ -32,7 +32,7 @@ export class Player{
   throwCurrent(g){if(!this.current||this.current.unthrowable)return;const thrown=this.current;g.throwWeapon(this,thrown,this.a);this.current=this.previous||makeWeapon('fists');this.previous=null;this.attackCd=.38;this.reloadT=0;this.reloadWeapon=null;}
   equip(w,g){if(this.current){this.previous=this.current}this.current=w;this.reloadT=0;this.reloadWeapon=null;g.audio.play('pickup');}
   swap(g){if(!this.previous)return;[this.current,this.previous]=[this.previous,this.current];this.reloadT=0;this.reloadWeapon=null;g.audio.play('ui');}
-  damage(n,g,sourceA=0){if(this.invuln>0||this.dead)return;this.hp-=n;this.invuln=.22;this.hitFlash=.15;g.fx.blood(this.x,this.y,5,sourceA+Math.PI);g.shake(8);g.audio.play('hurt');g.renderer?.glitch?.(.6);if(this.hp<=0){this.dead=true;g.onPlayerDeath();}}
+  damage(n,g,sourceA=0){if(this.invuln>0||this.dead)return;this.hp-=n;this.invuln=.22;this.hitFlash=.15;g.fx.blood(this.x,this.y,10,sourceA+Math.PI);g.shake(9);g.hurtFlash=1;g.audio.play('hurt');g.renderer?.glitch?.(.6);if(this.hp<=0){this.dead=true;g.onPlayerDeath();}}
   maskAccent(){return MASK_ACCENT[this.maskId]||COLORS.cyan}
   draw(ctx){
     const t=this.animT||0;

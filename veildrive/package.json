@@ -7,7 +7,8 @@
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/dev.mjs dist",
-    "test": "node scripts/smoke.mjs",
+    "test": "node scripts/unit-test.mjs",
+    "test:scenario": "node scripts/scenario-test.mjs",
     "verify": "node scripts/verify-render.mjs"
   }
 }

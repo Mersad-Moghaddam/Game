@@ -15,7 +15,7 @@ export class Boss{
       else if(this.mode==='stunned'&&this.stun<=0)this.mode='gun';
     }
   }
-  damage(n,g,angle=0){if(this.dead)return;const vulnerable=this.stun>0||this.phase<3;this.hp-=vulnerable?n:Math.max(.25,n*.35);g.fx.blood(this.x,this.y,6,angle);g.shake(3);if(this.hp<=0){this.dead=true;g.onBossKilled(this)}}
+  damage(n,g,angle=0){if(this.dead)return;this.phase=this.hp>10?1:this.hp>5?2:3;const vulnerable=this.stun>0||this.phase<3;this.hp-=vulnerable?n:Math.max(.25,n*.35);g.fx.blood(this.x,this.y,6,angle);g.shake(3);if(this.hp<=0){this.dead=true;g.onBossKilled(this)}}
   accent(){return this.phase===3?COLORS.blood:this.phase===2?COLORS.orange:COLORS.violet}
   draw(ctx){if(this.dead)return;const flash=this.stun>0;
     ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a);
