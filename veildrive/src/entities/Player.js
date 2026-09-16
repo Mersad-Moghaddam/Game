@@ -25,7 +25,7 @@ export class Player{
   throwCurrent(g){if(!this.current||this.current.unthrowable)return;const thrown=this.current;g.throwWeapon(this,thrown,this.a);this.current=this.previous||makeWeapon('fists');this.previous=null;this.attackCd=.38;}
   equip(w,g){if(this.current){this.previous=this.current}this.current=w;g.audio.play('pickup');}
   swap(g){if(!this.previous)return;[this.current,this.previous]=[this.previous,this.current];g.audio.play('ui');}
-  damage(n,g,sourceA=0){if(this.invuln>0||this.dead)return;this.hp-=n;this.invuln=.24;this.hitFlash=.15;g.fx.blood(this.x,this.y,5,sourceA+Math.PI);g.shake(6);g.audio.play('hurt');if(this.hp<=0){this.dead=true;g.onPlayerDeath();}}
+  damage(n,g,sourceA=0){if(this.invuln>0||this.dead)return;this.hp-=n;this.invuln=.24;this.hitFlash=.15;g.fx.blood(this.x,this.y,5,sourceA+Math.PI);g.shake(6);g.audio.play('hurt');g.renderer?.glitch?.(.6);if(this.hp<=0){this.dead=true;g.onPlayerDeath();}}
   draw(ctx){
     ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a+(this.dead?1.15:0));
     // soft shadow

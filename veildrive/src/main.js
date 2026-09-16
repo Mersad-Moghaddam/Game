@@ -4,8 +4,15 @@ import { Renderer } from './render/Renderer.js';
 const canvas = document.getElementById('game');
 const glCanvas = document.getElementById('gl');
 
-let renderer = new Renderer(glCanvas);
-if (renderer.available) {
+function webglSupported() {
+  try {
+    const probe = document.createElement('canvas');
+    return !!(probe.getContext('webgl2') || probe.getContext('webgl'));
+  } catch { return false; }
+}
+
+let renderer = webglSupported() ? new Renderer(glCanvas) : null;
+if (renderer && renderer.available) {
   canvas.style.display = 'none';
   glCanvas.style.display = 'block';
 } else {

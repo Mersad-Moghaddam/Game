@@ -2,8 +2,10 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { VIRTUAL_W, VIRTUAL_H } from '../data/config.js';
-import { LightingShader, MAX_LIGHTS } from './shaders.js';
+import { LightingShader, CRTShader, MAX_LIGHTS } from './shaders.js';
 
 export class Renderer {
   constructor(glCanvas) {
@@ -44,6 +46,14 @@ export class Renderer {
     this.lightPass.uniforms.uResolution.value.set(this.w, this.h);
     this.composer.addPass(this.lightPass);
 
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(this.w, this.h), 0.9, 0.55, 0.62);
+    this.composer.addPass(this.bloom);
+    this.crt = new ShaderPass(CRTShader);
+    this.crt.uniforms.uResolution.value.set(this.w, this.h);
+    this.composer.addPass(this.crt);
+    this.composer.addPass(new OutputPass());
+    this.glitchT = 0;
+
     this.available = true;
   }
 
@@ -52,10 +62,16 @@ export class Renderer {
 
   render() {
     if (!this.available) return;
+    const t = performance.now() / 1000;
+    this.crt.uniforms.uTime.value = t;
+    this.glitchT = Math.max(0, (this.glitchT || 0) - 0.016);
+    this.crt.uniforms.uGlitch.value = this.glitchT > 0 ? Math.min(1, this.glitchT * 6) : 0;
     this.albedo.texture.needsUpdate = true;
     this.emissive.texture.needsUpdate = true;
     this.composer.render();
   }
+
+  glitch(strength = 1) { this.glitchT = Math.max(this.glitchT || 0, 0.16 * strength); }
 
   setLights({ lights = [], ambient = 0.34, pulse = 0, flashPos = null, flashArc = 0.6 }) {
     if (!this.available) return;
@@ -79,8 +95,20 @@ export class Renderer {
     }
   }
 
-  setPost(on) { this.postEnabled = !!on; }
-  setQuality(q) { this.quality = q; }
+  setPost(on) {
+    this.postEnabled = !!on;
+    if (this.bloom) this.bloom.enabled = this.postEnabled;
+    if (this.crt) this.crt.enabled = this.postEnabled;
+  }
+  setQuality(q) {
+    this.quality = q;
+    if (this.bloom) this.bloom.strength = q < 0.5 ? 0.5 : 0.9;
+    if (this.crt) {
+      const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.crt.uniforms.uScanline.value = (q < 0.5 || reduced) ? 0 : 0.10;
+      this.crt.uniforms.uGrain.value = reduced ? 0 : 0.055;
+    }
+  }
 
   setSize() {
     if (!this.available) return;
