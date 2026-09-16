@@ -254,6 +254,23 @@ try {
   await sleep(150);
   ok('pause: escape resumes the run', (await evalG(() => window.__VEILDRIVE__.state)) === 'playing');
 
+  // --- pause menu: restart and quit ---
+  await page.keyboard.press('Escape'); await sleep(120);
+  await page.keyboard.press('ArrowDown');
+  const pIdx = await evalG(() => window.__VEILDRIVE__.pauseIndex);
+  ok('pause: menu selects restart', pIdx === 1, `index ${pIdx}`);
+  await page.keyboard.press('Enter');
+  const rstate = await waitFor(s => s.state === 'playing', 5000);
+  ok('pause: restart resumes the mission at full health', rstate.state === 'playing' && rstate.hp === 3, JSON.stringify(rstate));
+  await page.keyboard.press('Escape'); await sleep(120);
+  await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter'); await sleep(200);
+  ok('pause: quit returns to the menu', (await evalG(() => window.__VEILDRIVE__.state)) === 'menu');
+  await evalG(() => window.__VEILDRIVE__.startRun());
+  await waitFor(s => s.state === 'playing', 5000);
+  const intro = await evalG(() => ({ t: window.__VEILDRIVE__.introT, mission: window.__VEILDRIVE__.mission && window.__VEILDRIVE__.mission.id }));
+  ok('flow: mission intro card timer runs', Number.isFinite(intro.t) && !!intro.mission, JSON.stringify(intro));
+
   // --- idle enemies do not animate or shake ---
   const idle = await page.evaluate(async () => {
     const g = window.__VEILDRIVE__;
