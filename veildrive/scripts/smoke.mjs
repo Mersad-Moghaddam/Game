@@ -3,6 +3,7 @@ import { Level } from '../src/world/Level.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { MASKS, UPGRADES, COLORS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
+import { FX } from '../src/systems/FX.js';
 
 const level = new Level();
 assert.equal(level.w, 1800);
@@ -43,4 +44,21 @@ assert.notEqual(moodColor('sunset', 'glow', 0), moodColor('sunset', 'glow', 1), 
 for (const key of ['void', 'ground', 'ground2', 'wall', 'wallHi', 'hotPink', 'magenta', 'cyan', 'blue', 'violet', 'orange', 'lime', 'bone', 'ink', 'blood', 'bloodDark']) {
   assert(COLORS[key] && /^#[0-9a-f]{6}$/i.test(COLORS[key]), `missing palette key ${key}`);
 }
+
+// Gore painting must survive the decal/corpse caps (the cap shifts the array,
+// so an index cursor would silently stop painting new decals).
+const fx = new FX();
+while (fx.decals.length < 260) fx.decals.push({ x: 0, y: 0, r: 5, a: 0.5, painted: false });
+fx.markAllPainted();
+assert.equal(fx.unpaintedCount(), 0, 'markAllPainted clears pending gore');
+fx.pool(0, 0, 1);
+assert(fx.unpaintedCount() > 0, 'new gore after the cap must remain paintable');
+for (let i = 0; i < 500; i++) fx.pool(i % 100, i % 100, 3);
+assert.equal(fx.decals.length, 260, 'decal cap enforced');
+assert(fx.unpaintedCount() > 0, 'gore remains paintable after heavy use');
+for (let i = 0; i < 100; i++) fx.addCorpse(i, 0, 0);
+assert.equal(fx.corpses.length, 40, 'corpse cap enforced');
+fx.markAllPainted();
+assert.equal(fx.unpaintedCount(), 0, 'markAllPainted clears pending corpses too');
+assert.equal(fx.blood({ x: 0, y: 0 }) === undefined, true, 'blood() must not throw');
 console.log('VEIL//DRIVE smoke checks passed.');

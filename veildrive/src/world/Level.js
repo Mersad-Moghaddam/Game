@@ -1,4 +1,4 @@
-import { circleRect, segRect, clamp, dist } from '../core/math.js';
+import { circleRect, segRect, dist } from '../core/math.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { COLORS } from '../data/config.js';
 import { moodColor } from '../render/mood.js';
@@ -77,7 +77,7 @@ export class Level{
     const interior=this.zones.find(z=>z.type==='interior');
     const g0=moodColor(interior.mood,'ground',0), g1=moodColor(interior.mood,'ground2',0);
     ctx.fillStyle=g0;ctx.fillRect(interior.x,interior.y,interior.w,interior.h);
-    for(let y=interior.y;y<interior.y+interior.h;y+=48){for(let x=interior.x;x<interior.x+interior.w;x+=48){if(((x/48)+(y/48))%2===0)continue;ctx.fillStyle=g1;ctx.fillRect(x,y,46,46)}}
+    for(let y=interior.y,j=0;y<interior.y+interior.h;y+=48,j++){for(let x=interior.x,i=0;x<interior.x+interior.w;x+=48,i++){if((i+j)%2===0)continue;ctx.fillStyle=g1;ctx.fillRect(x,y,46,46)}}
     ctx.save();ctx.globalAlpha=.12;ctx.fillStyle='#000';
     for(let i=0;i<180;i++){const x=interior.x+hash2(i,41)*interior.w,y=interior.y+hash2(i,43)*interior.h,r=2+hash2(i,47)*10;ctx.beginPath();ctx.ellipse(x,y,r,r*.7,0,0,Math.PI*2);ctx.fill()}
     ctx.restore();
@@ -112,10 +112,11 @@ export class Level{
       if(p.type==='car'){ctx.fillStyle='rgba(18,224,255,.5)';ctx.fillRect(p.x+8,p.y+8,p.w-24,10)}
       if(p.type==='vending'){ctx.fillStyle=moodColor('violet','glow',0);ctx.globalAlpha=.35;ctx.fillRect(p.x+6,p.y+6,p.w-12,p.h-12);ctx.globalAlpha=1}
     }
-    // pickups
-    for(const p of this.pickups){if(p.taken)continue;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(-.35);ctx.fillStyle=p.weapon.color;ctx.fillRect(-14,-3,28,6);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fillRect(-10,-5,6,2);ctx.restore();}
-    // objective
-    if(this.objective&&!this.objective.taken){ctx.save();ctx.translate(this.objective.x,this.objective.y);ctx.fillStyle=COLORS.orange;ctx.fillRect(-11,-7,22,14);ctx.fillStyle=COLORS.ink;ctx.fillRect(-7,-4,5,8);ctx.fillRect(2,-4,5,8);ctx.restore();}
+    // pickups and objective are dynamic; drawn per frame by drawItems()
     ctx.restore();
+  }
+  drawItems(ctx){
+    for(const p of this.pickups){if(p.taken)continue;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(-.35);ctx.fillStyle=p.weapon.color;ctx.fillRect(-14,-3,28,6);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fillRect(-10,-5,6,2);ctx.restore();}
+    if(this.objective&&!this.objective.taken){ctx.save();ctx.globalAlpha=.35;ctx.fillStyle=COLORS.orange;ctx.beginPath();ctx.arc(this.objective.x,this.objective.y,17,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.translate(this.objective.x,this.objective.y);ctx.fillStyle=COLORS.orange;ctx.fillRect(-11,-7,22,14);ctx.fillStyle=COLORS.ink;ctx.fillRect(-7,-4,5,8);ctx.fillRect(2,-4,5,8);ctx.restore();}
   }
 }

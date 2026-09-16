@@ -1,4 +1,4 @@
-import { dist, norm, angleDiff, rand, clamp } from '../core/math.js';
+import { dist, norm, angleDiff, rand } from '../core/math.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { COLORS } from '../data/config.js';
 const TYPES={
