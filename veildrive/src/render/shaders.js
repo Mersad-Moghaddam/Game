@@ -58,9 +58,9 @@ export const LightingShader = {
         light += vec3(1.0, 0.85, 0.6) * cone * 0.35;
       }
       vec3 lit = base * light;
-      lit = lit / (lit + vec3(0.85));
-      vec3 outCol = lit * 1.6 + glow;
-      outCol = mix(outCol, smoothstep(vec3(0.0), vec3(1.0), outCol), 0.15);
+      lit = lit / (lit + vec3(0.55));
+      vec3 outCol = lit * 1.5 + glow;
+      outCol = mix(outCol, smoothstep(vec3(0.0), vec3(1.0), outCol), 0.12);
       gl_FragColor = vec4(outCol, 1.0);
     }
   `

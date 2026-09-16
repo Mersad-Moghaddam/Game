@@ -1,8 +1,8 @@
 export const MOODS = {
-  sunset: { ground:'#1a0a33', ground2:'#4a1240', wall:'#5a1440', wallHi:'#ff5a3c', glow:'#ff7a1a', accent:'#ff2e88' },
-  violet: { ground:'#150733', ground2:'#341063', wall:'#4a1a7a', wallHi:'#b06bff', glow:'#8b2bff', accent:'#12e0ff' },
-  toxic:  { ground:'#101a12', ground2:'#243a12', wall:'#2e4a1a', wallHi:'#c6ff2e', glow:'#c6ff2e', accent:'#12e0ff' },
-  blood:  { ground:'#1a0611', ground2:'#3a0a1c', wall:'#5a0f26', wallHi:'#ff4a5a', glow:'#ff7a1a', accent:'#ff0a3c' }
+  sunset: { ground:'#2a0f44', ground2:'#5a1648', wall:'#6a1a4a', wallHi:'#ff5a3c', glow:'#ff7a1a', accent:'#ff2e88' },
+  violet: { ground:'#2a1155', ground2:'#4a1a8a', wall:'#5a2290', wallHi:'#c07bff', glow:'#8b2bff', accent:'#12e0ff' },
+  toxic:  { ground:'#16260f', ground2:'#2e4a12', wall:'#3a5a1a', wallHi:'#c6ff2e', glow:'#c6ff2e', accent:'#12e0ff' },
+  blood:  { ground:'#2a0818', ground2:'#4a0f26', wall:'#6a1230', wallHi:'#ff5a6a', glow:'#ff7a1a', accent:'#ff0a3c' }
 };
 
 export const MOOD_IDS = ['sunset', 'violet', 'toxic', 'blood'];

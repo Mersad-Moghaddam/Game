@@ -74,6 +74,22 @@ The boss, **THE PORTER**, wears a keyhole-shaped service mask and changes combat
 - Pause, focus loss handling, instant mission rewind on death
 - Developer/debug tools
 
+## Rendering (Three.js / Hotline Miami look)
+
+The game is simulated entirely in 2D and rendered through a GPU pipeline with a Hotline Miami visual style: saturated neon, palette that pulses with the music beat, heavy CRT/VHS post-processing, patterned floors and exaggerated gore.
+
+- **Three.js (r186)** is vendored under `vendor/` and loaded with an import map in `index.html` — no bundler and no CDN. `scripts/build.mjs` copies `vendor/` into `dist/`.
+- **Layer model.** Each frame the existing Canvas-2D drawing code renders two 960×540 offscreen canvases: *albedo* (the lit scene) and *emissive* (glow only). Both become `CanvasTexture`s on full-screen quads in an `OrthographicCamera` scene.
+- **Lighting.** A custom `ShaderPass` (`src/render/shaders.js`) combines `albedo × lights + emissive` using up to 16 mood-coloured lights plus ambient. Lights flicker and brighten on the beat; `src/render/mood.js` holds the four mood palettes (`sunset`, `violet`, `toxic`, `blood`) used per zone.
+- **Post.** `EffectComposer`: render → lighting → `UnrealBloomPass` (neon bloom) → CRT/VHS pass (chromatic aberration, scanlines, barrel distortion, vignette, grain, glitch bursts on damage/explosions) → `OutputPass`.
+- **UI overlay.** HUD, menus, results and upgrade screens draw to a separate `#ui` 2D canvas stacked above the WebGL canvas, so text stays crisp and undistorted.
+- **Static bake.** The environment is baked once into an 1800×1100 canvas (`Level.bake`) and blitted per frame; blood pools, corpses and broken props are painted into it and it is re-baked only when something static changes.
+- **Fallback.** If WebGL is unavailable, `main.js` skips Three.js entirely and the original Canvas-2D path renders the game, so it always runs.
+
+Debug/quality: `settings.post` toggles the bloom/CRT chain; `settings.quality` reduces lights and effects; `prefers-reduced-motion` disables scanline roll, grain and glitch. The internal resolution stays 960×540 (no pixelation downscale).
+
+`npm run verify` boots the dev server in headless Chromium (if Playwright is installed) and asserts there are no console errors, a WebGL context exists, and the frame renders.
+
 ## Architecture
 
 ```text
@@ -94,6 +110,10 @@ src/
     Level.js      Motel layout, doors, props, pickups, collisions and line of sight
   systems/
     FX.js         Particles, blood decals, afterimages and transient flashes
+  render/
+    Renderer.js   Three.js renderer, layer quads, EffectComposer, fallback probe
+    shaders.js    GLSL for the lighting and CRT/VHS passes
+    mood.js       Per-zone neon palettes and beat-pulse colour helper
   data/
     config.js     Settings, palette and upgrade definitions
 ```
@@ -102,7 +122,7 @@ The game intentionally keeps content data separate from entity behavior so addit
 
 ## Asset strategy and attribution
 
-All visible game graphics are constructed procedurally at runtime from original layered shapes. All sound is synthesized at runtime through Web Audio. There are no external asset files requiring attribution.
+All visible game graphics are constructed procedurally at runtime from original layered shapes. All sound is synthesized at runtime through Web Audio. There are no external art, music or sound asset files requiring attribution. The only third-party code is the MIT-licensed Three.js library, vendored under `vendor/` for GPU compositing and post-processing.
 
 For a larger production, the procedural `draw()` methods can be replaced by sprite-sheet rendering while retaining entity dimensions, weapon sockets and gameplay code.
 
