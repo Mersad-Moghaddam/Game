@@ -1,6 +1,8 @@
 // Five compact Hotline Miami-style missions. Each is a single floor with a
 // clear goal, an unlockable exit, a mood palette and a bespoke enemy roster.
-// Consumed by Level(def) and the campaign flow in Game.js.
+// Every mission opens with the player sealed in an empty entry room and a
+// single breachable door into the action. Consumed by Level(def) and the
+// campaign flow in Game.js.
 
 const W = (x, y, w, h) => ({ x, y, w, h });
 const D = (x, y, w, h) => ({ x, y, w, h });
@@ -12,11 +14,11 @@ export const MISSIONS = [
   {
     id: 'motel',
     name: 'MOTEL STATIC',
-    sub: 'Room-to-room. Clear the motel, then get out.',
+    sub: 'Sealed in maintenance. Breach out and clear every room.',
     mood: 'violet',
     w: 1800, h: 1100,
-    spawn: { x: 200, y: 520 },
-    exit: { x: 200, y: 520 },
+    spawn: { x: 150, y: 520 },
+    exit: { x: 150, y: 520 },
     goal: { type: 'eliminate' },
     walls: [
       W(330, 100, 1240, 28), W(330, 892, 1240, 28), W(330, 100, 28, 330), W(330, 500, 28, 420), W(1542, 100, 28, 820),
@@ -25,23 +27,27 @@ export const MISSIONS = [
       W(870, 128, 28, 152), W(870, 350, 28, 50), W(1160, 128, 28, 122), W(1160, 320, 28, 80),
       W(358, 400, 112, 28), W(548, 400, 322, 28), W(898, 400, 262, 28), W(1160, 400, 382, 28),
       W(650, 548, 28, 132), W(650, 754, 28, 138), W(960, 548, 28, 82), W(960, 704, 28, 188), W(1210, 548, 28, 142), W(1210, 770, 28, 122),
-      W(1210, 690, 110, 28), W(1395, 690, 147, 28)
+      W(1210, 690, 110, 28), W(1395, 690, 147, 28),
+      W(40, 400, 260, 24), W(40, 616, 260, 24), W(40, 400, 24, 240), W(276, 400, 24, 100), W(276, 572, 24, 68)
     ],
     doors: [
       D(650, 300, 28, 72), D(578, 520, 80, 28), D(868, 520, 80, 28), D(1158, 520, 80, 28),
       D(470, 400, 78, 28), D(870, 280, 28, 70), D(1160, 250, 28, 70),
-      D(650, 680, 28, 74), D(960, 630, 28, 74), D(1210, 696, 28, 74), D(1320, 690, 75, 28)
+      D(650, 680, 28, 74), D(960, 630, 28, 74), D(1210, 696, 28, 74), D(1320, 690, 75, 28),
+      D(276, 500, 24, 72)
     ],
     props: [
       P(95, 660, 120, 48, 'car', true, 4), P(90, 230, 118, 48, 'car', true, 4), P(220, 820, 64, 30, 'dumpster', true, 3),
       P(420, 180, 92, 34, 'sofa'), P(535, 245, 54, 54, 'desk', true, 3), P(715, 180, 76, 36, 'bed', true, 3), P(985, 190, 78, 36, 'bed', true, 3), P(1285, 185, 78, 36, 'bed', true, 3),
       P(728, 595, 56, 30, 'table'), P(820, 760, 70, 34, 'table'), P(1008, 610, 44, 44, 'vending', true, 3), P(1055, 805, 80, 28, 'bench'), P(905, 590, 24, 24, 'barrel', true, 1), P(1180, 845, 24, 24, 'barrel', true, 1),
       P(1270, 745, 72, 34, 'desk', true, 3), P(1435, 795, 42, 58, 'cabinet', true, 3),
+      P(360, 660, 24, 24, 'barrel', true, 1), P(1300, 650, 24, 24, 'barrel', true, 1),
       P(805, 400, 12, 28, 'glass', false, 1), P(1110, 400, 12, 28, 'glass', false, 1), P(650, 610, 12, 50, 'glass', false, 1)
     ],
-    lights: [L(500, 260, 190), L(760, 290, 150), L(1030, 280, 150), L(1320, 270, 170), L(760, 680, 170), L(1080, 690, 160), L(1380, 790, 180)],
+    lights: [L(500, 260, 190), L(760, 290, 150), L(1030, 280, 150), L(1320, 270, 170), L(760, 680, 170), L(1080, 690, 160), L(1380, 790, 180), L(150, 520, 150)],
     pickups: [{ x: 250, y: 540, weapon: 'baton' }, { x: 750, y: 245, weapon: 'pistol' }, { x: 1010, y: 760, weapon: 'shotgun' }, { x: 1375, y: 230, weapon: 'suppressed' }],
     enemies: [
+      E(250, 320, 'guard', [{ x: 230, y: 300 }, { x: 290, y: 360 }]),
       E(510, 250, 'guard', [{ x: 450, y: 250 }, { x: 590, y: 250 }]),
       E(770, 320, 'brawler', [{ x: 730, y: 190 }, { x: 810, y: 350 }]),
       E(1010, 290, 'hunter', [{ x: 950, y: 220 }, { x: 1090, y: 330 }]),
@@ -60,26 +66,28 @@ export const MISSIONS = [
   {
     id: 'club',
     name: 'THE NEON ROOM',
-    sub: 'Grab the tape off the stage, then get out.',
+    sub: 'Out of the stockroom. Take the tape off the stage and run for the doors.',
     mood: 'sunset',
     w: 1200, h: 760,
-    spawn: { x: 90, y: 380 },
+    spawn: { x: 110, y: 380 },
     exit: { x: 1100, y: 380 },
     goal: { type: 'retrieve', x: 600, y: 320, label: 'THE STATIC TAPE' },
     walls: [
       W(0, 0, 1200, 28), W(0, 732, 1200, 28), W(0, 28, 28, 704), W(1172, 28, 28, 704),
       W(430, 180, 340, 28), W(430, 180, 28, 140), W(742, 180, 28, 140),
       W(860, 470, 28, 180), W(860, 470, 200, 28),
-      W(300, 470, 28, 28), W(300, 180, 28, 28), W(1000, 180, 28, 28)
+      W(300, 470, 28, 28), W(300, 180, 28, 28), W(1000, 180, 28, 28),
+      W(40, 300, 180, 24), W(40, 436, 180, 24), W(40, 300, 24, 160), W(196, 300, 24, 60), W(196, 420, 24, 40)
     ],
-    doors: [],
+    doors: [D(196, 360, 24, 60)],
     props: [
       P(150, 120, 90, 34, 'sofa'), P(150, 600, 90, 34, 'sofa'), P(980, 600, 90, 34, 'sofa'), P(980, 120, 90, 34, 'sofa'),
       P(300, 300, 56, 30, 'table'), P(900, 300, 56, 30, 'table'), P(300, 560, 56, 30, 'table'), P(900, 560, 56, 30, 'table'),
       P(520, 60, 44, 44, 'vending'), P(1100, 60, 24, 24, 'barrel', true, 1), P(80, 700, 24, 24, 'barrel', true, 1),
+      P(470, 420, 24, 24, 'barrel', true, 1), P(700, 420, 24, 24, 'barrel', true, 1),
       P(600, 480, 12, 28, 'glass', false, 1)
     ],
-    lights: [L(600, 300, 230), L(250, 180, 150), L(950, 180, 150), L(250, 580, 150), L(950, 580, 150)],
+    lights: [L(600, 300, 230), L(250, 180, 150), L(950, 180, 150), L(250, 580, 150), L(950, 580, 150), L(110, 380, 140)],
     pickups: [{ x: 130, y: 400, weapon: 'baton' }, { x: 1050, y: 120, weapon: 'pistol' }, { x: 1050, y: 640, weapon: 'smg' }],
     enemies: [
       E(600, 250, 'brawler', [{ x: 540, y: 240 }, { x: 660, y: 300 }]),
@@ -96,10 +104,10 @@ export const MISSIONS = [
   {
     id: 'storage',
     name: 'COLD STORAGE',
-    sub: 'A warehouse floor. Everyone on it dies.',
+    sub: 'Locked in the foreman\u2019s office. Breach the aisles and wipe the floor.',
     mood: 'toxic',
     w: 1300, h: 820,
-    spawn: { x: 120, y: 410 },
+    spawn: { x: 120, y: 650 },
     exit: { x: 1220, y: 140 },
     goal: { type: 'eliminate' },
     walls: [
@@ -108,19 +116,20 @@ export const MISSIONS = [
       W(470, 120, 28, 200), W(470, 400, 28, 300),
       W(710, 120, 28, 200), W(710, 400, 28, 300),
       W(950, 120, 28, 200), W(950, 400, 28, 300),
-      W(28, 300, 202, 28), W(1000, 520, 272, 28)
+      W(28, 300, 202, 28), W(1000, 520, 272, 28),
+      W(40, 560, 190, 24), W(40, 736, 190, 24), W(40, 560, 24, 200), W(206, 560, 24, 80), W(206, 700, 24, 60)
     ],
-    doors: [],
+    doors: [D(206, 640, 24, 60)],
     props: [
       P(300, 180, 40, 40, 'cabinet'), P(360, 180, 40, 40, 'cabinet'), P(300, 240, 40, 40, 'cabinet'),
       P(540, 180, 40, 40, 'cabinet'), P(600, 180, 40, 40, 'cabinet'), P(540, 620, 40, 40, 'cabinet'),
       P(780, 180, 40, 40, 'cabinet'), P(840, 180, 40, 40, 'cabinet'), P(840, 620, 40, 40, 'cabinet'),
       P(1020, 180, 40, 40, 'cabinet'), P(1080, 180, 40, 40, 'cabinet'),
-      P(150, 200, 24, 24, 'barrel', true, 1), P(150, 600, 24, 24, 'barrel', true, 1),
-      P(1240, 600, 24, 24, 'barrel', true, 1), P(1200, 200, 24, 24, 'barrel', true, 1),
-      P(1200, 700, 44, 44, 'vending')
+      P(350, 700, 24, 24, 'barrel', true, 1), P(1240, 600, 24, 24, 'barrel', true, 1),
+      P(600, 350, 24, 24, 'barrel', true, 1), P(850, 350, 24, 24, 'barrel', true, 1),
+      P(1200, 200, 24, 24, 'barrel', true, 1), P(1200, 700, 44, 44, 'vending')
     ],
-    lights: [L(350, 250, 170), L(600, 250, 170), L(850, 250, 170), L(1100, 250, 170), L(650, 700, 200)],
+    lights: [L(350, 250, 170), L(600, 250, 170), L(850, 250, 170), L(1100, 250, 170), L(650, 700, 200), L(120, 650, 150)],
     pickups: [{ x: 120, y: 720, weapon: 'pistol' }, { x: 800, y: 120, weapon: 'shotgun' }, { x: 1240, y: 740, weapon: 'smg' }, { x: 600, y: 740, weapon: 'baton' }],
     enemies: [
       E(350, 150, 'guard', [{ x: 300, y: 140 }, { x: 420, y: 300 }]),
@@ -138,31 +147,34 @@ export const MISSIONS = [
   {
     id: 'subway',
     name: 'LAST TRAIN',
-    sub: 'Marked man on the far platform. Finish it.',
+    sub: 'Up from the stairwell. The marked man has an escort \u2014 cut through it.',
     mood: 'blood',
     w: 1420, h: 700,
     spawn: { x: 110, y: 350 },
-    exit: { x: 120, y: 120 },
+    exit: { x: 110, y: 350 },
     goal: { type: 'target', x: 1300, y: 350 },
     walls: [
       W(0, 0, 1420, 28), W(0, 672, 1420, 28), W(0, 28, 28, 644), W(1392, 28, 28, 644),
       W(300, 120, 28, 200), W(300, 380, 28, 200),
       W(900, 120, 28, 200), W(900, 380, 28, 200),
-      W(600, 180, 28, 28), W(600, 480, 28, 28), W(1100, 180, 28, 28), W(1100, 480, 28, 28)
+      W(600, 180, 28, 28), W(600, 480, 28, 28), W(1100, 180, 28, 28), W(1100, 480, 28, 28),
+      W(40, 270, 170, 24), W(40, 406, 170, 24), W(40, 270, 24, 160), W(186, 270, 24, 60), W(186, 390, 24, 40)
     ],
-    doors: [],
+    doors: [D(186, 330, 24, 60)],
     props: [
       P(380, 180, 80, 28, 'bench'), P(380, 480, 80, 28, 'bench'),
       P(960, 180, 80, 28, 'bench'), P(960, 480, 80, 28, 'bench'),
       P(1240, 180, 80, 28, 'bench'), P(1240, 480, 80, 28, 'bench'),
       P(120, 60, 44, 44, 'vending'), P(1360, 600, 44, 44, 'vending'),
-      P(80, 600, 24, 24, 'barrel', true, 1),
+      P(80, 600, 24, 24, 'barrel', true, 1), P(650, 350, 24, 24, 'barrel', true, 1),
       P(600, 300, 12, 28, 'glass', false, 1)
     ],
-    lights: [L(200, 350, 170), L(500, 120, 150), L(500, 580, 150), L(1000, 120, 150), L(1000, 580, 150), L(1300, 350, 180)],
+    lights: [L(200, 350, 170), L(500, 120, 150), L(500, 580, 150), L(1000, 120, 150), L(1000, 580, 150), L(1300, 350, 180), L(110, 350, 150)],
     pickups: [{ x: 150, y: 640, weapon: 'pistol' }, { x: 760, y: 640, weapon: 'shotgun' }, { x: 100, y: 80, weapon: 'baton' }],
     enemies: [
       E(1300, 350, 'elite', [{ x: 1260, y: 320 }, { x: 1340, y: 420 }]),
+      E(1180, 290, 'guard', [{ x: 1140, y: 280 }, { x: 1240, y: 320 }]),
+      E(1180, 410, 'guard', [{ x: 1140, y: 400 }, { x: 1240, y: 440 }]),
       E(220, 150, 'guard', [{ x: 160, y: 140 }, { x: 300, y: 260 }]),
       E(220, 550, 'brawler', [{ x: 160, y: 520 }, { x: 300, y: 620 }]),
       E(520, 250, 'hunter', [{ x: 470, y: 200 }, { x: 580, y: 340 }]),
@@ -176,33 +188,37 @@ export const MISSIONS = [
   {
     id: 'penthouse',
     name: 'THE PORTER',
-    sub: 'Top floor. The Porter is waiting.',
+    sub: 'The elevator opens onto his hall. Fight through the staff to the Porter.',
     mood: 'violet',
     w: 1200, h: 800,
     spawn: { x: 120, y: 400 },
-    exit: { x: 120, y: 140 },
+    exit: { x: 120, y: 400 },
     goal: { type: 'boss' },
     boss: { x: 950, y: 400 },
     walls: [
       W(0, 0, 1200, 28), W(0, 772, 1200, 28), W(0, 28, 28, 744), W(1172, 28, 28, 744),
       W(400, 28, 28, 300), W(400, 428, 28, 344),
-      W(800, 28, 28, 260), W(800, 388, 28, 384)
+      W(800, 28, 28, 260), W(800, 388, 28, 384),
+      W(40, 320, 190, 24), W(40, 456, 190, 24), W(40, 320, 24, 160), W(206, 320, 24, 60), W(206, 440, 24, 40)
     ],
-    doors: [],
+    doors: [D(206, 380, 24, 60)],
     props: [
       P(120, 80, 80, 36, 'bed'), P(120, 640, 72, 34, 'desk'), P(300, 300, 60, 30, 'table'),
       P(520, 80, 92, 34, 'sofa'), P(520, 660, 92, 34, 'sofa'),
       P(980, 80, 78, 36, 'bed'), P(1050, 600, 72, 34, 'desk'), P(900, 650, 44, 58, 'cabinet'),
-      P(700, 300, 24, 24, 'barrel', true, 1), P(1100, 300, 44, 44, 'vending')
+      P(700, 300, 24, 24, 'barrel', true, 1), P(1100, 300, 44, 44, 'vending'),
+      P(520, 380, 24, 24, 'barrel', true, 1)
     ],
-    lights: [L(250, 250, 180), L(650, 250, 190), L(1000, 250, 180), L(250, 600, 180), L(900, 600, 180)],
+    lights: [L(250, 250, 180), L(650, 250, 190), L(1000, 250, 180), L(250, 600, 180), L(900, 600, 180), L(120, 400, 150)],
     pickups: [{ x: 200, y: 400, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 700, weapon: 'shotgun' }, { x: 1080, y: 120, weapon: 'suppressed' }],
     enemies: [
       E(600, 200, 'elite', [{ x: 560, y: 180 }, { x: 680, y: 260 }]),
       E(600, 600, 'shotgunner', [{ x: 560, y: 560 }, { x: 680, y: 660 }]),
       E(950, 180, 'brawler', [{ x: 900, y: 150 }, { x: 1050, y: 240 }]),
       E(950, 620, 'hunter', [{ x: 900, y: 580 }, { x: 1050, y: 680 }]),
-      E(1080, 400, 'guard', [{ x: 1040, y: 360 }, { x: 1140, y: 440 }])
+      E(1080, 400, 'guard', [{ x: 1040, y: 360 }, { x: 1140, y: 440 }]),
+      E(330, 250, 'guard', [{ x: 300, y: 220 }, { x: 380, y: 300 }]),
+      E(330, 550, 'guard', [{ x: 300, y: 520 }, { x: 380, y: 600 }])
     ]
   }
 ];

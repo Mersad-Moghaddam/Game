@@ -48,7 +48,7 @@ The boss, **THE PORTER**, wears a keyhole-shaped service mask and changes combat
 
 ## Campaign
 
-Five missions play back-to-back: **MOTEL STATIC** (the original room-to-room motel), **THE NEON ROOM**, **COLD STORAGE**, **LAST TRAIN** and **THE PORTER**. Each is a data-driven single floor (`src/data/missions.js`) with its own neon mood, enemy roster and objective — clear the floor, retrieve an item, assassinate the marked target, or kill the boss. Finishing the objective lights an **EXIT**; reaching it clears the mission, then a short interlude and an upgrade choice lead into the next mission. Dying rewinds the current mission instantly. Clearing all five shows the campaign grade.
+Five missions play back-to-back: **MOTEL STATIC** (the original room-to-room motel), **THE NEON ROOM**, **COLD STORAGE**, **LAST TRAIN** and **THE PORTER**. Each is a data-driven single floor (`src/data/missions.js`) with its own neon mood, enemy roster and objective — clear the floor, retrieve an item, assassinate the marked target, or kill the boss. **Every mission opens with the player sealed in an empty entry room** and a single breachable door into the action; finishing the objective lights an **EXIT**; reaching it clears the mission, then a short interlude and an upgrade choice lead into the next mission. Dying rewinds the current mission instantly. Clearing all five shows the campaign grade.
 
 Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a **9mm Pistol** (melee weapons are still available as pickups for silent work), has 3 HP, grunts die in a single hit, elites take two, and enemies react quickly. Between missions you pick an upgrade; the pool includes stacking **gun mods** — HOT LOAD (+damage), HAIR TRIGGER (+fire rate), EXTENDED MAG (+magazine) and ARMOR PIERCING (+pierce) — so your firearms get stronger run after run.
 
@@ -83,7 +83,7 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 
 ## Rendering (Three.js / Hotline Miami look)
 
-The game is simulated entirely in 2D and rendered through a GPU pipeline with a Hotline Miami visual style: saturated neon, palette that pulses with the music beat, heavy CRT/VHS post-processing, patterned floors and exaggerated gore.
+The game is simulated entirely in 2D and rendered through a GPU pipeline with a Hotline Miami visual style: saturated neon, palette that pulses with the music beat, heavy CRT/VHS post-processing, patterned floors and exaggerated gore. Feedback is deliberately loud — heavy screen shake on firing, hits, kills, breaches and explosions, with expanding shockwave rings, big muzzle flashes, hit-stop and glitch bursts on impact.
 
 - **Three.js (r186)** is vendored under `vendor/` and loaded with an import map in `index.html` — no bundler and no CDN. `scripts/build.mjs` copies `vendor/` into `dist/`.
 - **Layer model.** Each frame the existing Canvas-2D drawing code renders two 960×540 offscreen canvases: *albedo* (the lit scene) and *emissive* (glow only). Both become `CanvasTexture`s on full-screen quads in an `OrthographicCamera` scene.

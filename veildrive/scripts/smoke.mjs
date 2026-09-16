@@ -110,6 +110,14 @@ for (const m of MISSIONS) {
   const built = new Level(m);
   assert.equal(built.w, m.w);
   assert.equal(built.exit.x, m.exit.x);
+  // Every mission must open in an empty entry room with a door out.
+  const nearest = Math.min(...m.enemies.map(e => Math.hypot(e.x - m.spawn.x, e.y - m.spawn.y)));
+  let doorDist = Infinity;
+  for (const d of built.doors) doorDist = Math.min(doorDist, Math.hypot(d.x + d.w / 2 - m.spawn.x, d.y + d.h / 2 - m.spawn.y));
+  assert.equal(built.blocked(m.spawn.x, m.spawn.y, 14), false, `${m.id} spawn must be clear`);
+  assert(built.doors.length >= 1, `${m.id} needs a door out of the entry room`);
+  assert(nearest > 120, `${m.id} must start in an empty room (nearest foe ${nearest.toFixed(0)})`);
+  assert(doorDist < 200, `${m.id} entry door must be nearby (${doorDist.toFixed(0)})`);
   built.bake(fakeCtx);
 }
 for (const t of ['eliminate', 'retrieve', 'target', 'boss']) {
