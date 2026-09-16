@@ -81,6 +81,20 @@ assert(guard.speed >= 115, 'enemies move fast');
 assert.equal(new Enemy(0, 0, 'elite', []).hp, 2, 'elites take two hits');
 assert.equal(new Boss(0, 0).maxHp, 16, 'boss HP');
 
+// MOTH-0 starts armed and can upgrade firearms through the campaign.
+assert.equal(hero.current.id, 'pistol', 'player starts with the pistol');
+assert.equal(hero.current.kind, 'gun', 'starting weapon is a gun');
+assert.equal(hero.magOf(hero.current), hero.current.mag, 'base magazine matches');
+assert.equal(hero.damageMul, 1, 'base gun damage multiplier');
+for (const id of ['power', 'trigger', 'extmag', 'pierce']) assert(UPGRADES.some(u => u.id === id), `${id} gun mod exists`);
+const baseMag = hero.magOf(hero.current);
+UPGRADES.find(u => u.id === 'power').apply(hero);
+assert(hero.damageMul > 1, 'HOT LOAD raises gun damage');
+UPGRADES.find(u => u.id === 'extmag').apply(hero);
+assert.equal(hero.magOf(hero.current), baseMag + 3, 'EXTENDED MAG adds 3 rounds');
+UPGRADES.find(u => u.id === 'pierce').apply(hero);
+assert.equal(hero.pierce, 1, 'ARMOR PIERCING adds a pierce');
+
 const fakeCtx = { save(){}, restore(){}, fillRect(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, fill(){}, arc(){}, ellipse(){}, strokeRect(){}, setLineDash(){}, fillText(){}, translate(){}, rotate(){}, clearRect(){}, globalAlpha: 1, globalCompositeOperation: '' };
 assert(MISSION_COUNT >= 5, 'at least 5 missions in the campaign');
 assert.equal(MISSIONS.length, MISSION_COUNT);

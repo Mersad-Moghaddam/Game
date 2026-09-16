@@ -24,4 +24,8 @@ export const UPGRADES = [
   {id:'noise',name:'SOFT SOLES',desc:'Footstep noise reduced 45%.',apply:p=>p.noiseMul*=0.55},
   {id:'execution',name:'CLOSE THE FILE',desc:'Executions restore dash.',apply:p=>p.execRestoresDash=true},
   {id:'ricochet',name:'GLASS TEETH',desc:'Bullets ricochet once from walls.',apply:p=>p.ricochet=true},
+  {id:'power',name:'HOT LOAD',desc:'Gun damage +15%.',apply:p=>p.damageMul*=1.15},
+  {id:'trigger',name:'HAIR TRIGGER',desc:'Gun fire rate +12%.',apply:p=>p.rateMul*=0.88},
+  {id:'extmag',name:'EXTENDED MAG',desc:'+3 rounds per magazine.',apply:p=>p.magBonus+=3},
+  {id:'pierce',name:'ARMOR PIERCING',desc:'Bullets pierce one more enemy.',apply:p=>p.pierce+=1},
 ];

@@ -4,11 +4,12 @@ import { COLORS } from '../data/config.js';
 import { drawHuman } from '../render/humanoid.js';
 const MASK_ACCENT = { 'MOTH-0': COLORS.cyan, 'RAM-7': COLORS.orange, 'FOX-2': COLORS.cyan, 'RAVEN-3': COLORS.violet };
 export class Player{
-  constructor(x,y){this.x=x;this.y=y;this.r=13;this.a=0;this.hp=3;this.maxHp=3;this.moveSpeed=270;this.dashCooldown=.6;this.dashTimer=0;this.dashCd=0;this.dashV={x:0,y:0};this.invuln=0;this.attackCd=0;this.reloadT=0;this.reloadWeapon=null;this.reloadMul=1;this.spreadMul=1;this.meleeMul=1;this.noiseMul=1;this.comboBonus=0;this.execRestoresDash=false;this.ricochet=false;this.maskId='MOTH-0';this.breachBonus=0;this.detectionMul=1;this.thrownBonus=0;this.current=makeWeapon('baton');this.previous=null;this.dead=false;this.hitFlash=0;this.stepT=0;this.animT=0;}
+  constructor(x,y){this.x=x;this.y=y;this.r=13;this.a=0;this.hp=3;this.maxHp=3;this.moveSpeed=270;this.dashCooldown=.6;this.dashTimer=0;this.dashCd=0;this.dashV={x:0,y:0};this.invuln=0;this.attackCd=0;this.reloadT=0;this.reloadWeapon=null;this.reloadMul=1;this.spreadMul=1;this.meleeMul=1;this.noiseMul=1;this.damageMul=1;this.rateMul=1;this.magBonus=0;this.pierce=0;this.comboBonus=0;this.execRestoresDash=false;this.ricochet=false;this.maskId='MOTH-0';this.breachBonus=0;this.detectionMul=1;this.thrownBonus=0;this.current=makeWeapon('pistol');this.previous=null;this.dead=false;this.hitFlash=0;this.stepT=0;this.animT=0;}
+  magOf(w){return Math.max(1,(w.mag||0)+this.magBonus)}
   update(dt,g){
     const i=g.input;this.attackCd=Math.max(0,this.attackCd-dt);this.dashCd=Math.max(0,this.dashCd-dt);this.invuln=Math.max(0,this.invuln-dt);this.hitFlash=Math.max(0,this.hitFlash-dt);
     const mw=g.screenToWorld(i.mouse.x,i.mouse.y);this.a=Math.atan2(mw.y-this.y,mw.x-this.x);
-    if(this.reloadT>0){this.reloadT-=dt;if(this.reloadT<=0){const rw=this.reloadWeapon;if(rw&&rw.kind==='gun'&&rw.ammo<rw.mag&&rw.reserve>0){const need=rw.mag-rw.ammo,take=Math.min(need,rw.reserve);rw.ammo+=take;rw.reserve-=take;g.audio.play('reload')}this.reloadWeapon=null}}
+    if(this.reloadT>0){this.reloadT-=dt;if(this.reloadT<=0){const rw=this.reloadWeapon;const mag=rw?this.magOf(rw):0;if(rw&&rw.kind==='gun'&&rw.ammo<mag&&rw.reserve>0){const need=mag-rw.ammo,take=Math.min(need,rw.reserve);rw.ammo+=take;rw.reserve-=take;g.audio.play('reload')}this.reloadWeapon=null}}
     let x=(i.down('KeyD')?1:0)-(i.down('KeyA')?1:0),y=(i.down('KeyS')?1:0)-(i.down('KeyW')?1:0);const n=norm(x,y);const moving=!!(x||y);if(!moving){n.x=0;n.y=0}
     this.animT+=(moving?9:2)*dt;
     if(i.tap('ShiftLeft')||i.tap('ShiftRight'))this.startDash(n,g);
@@ -23,9 +24,9 @@ export class Player{
     if(i.tap('Space'))g.interact(true);
   }
   startDash(n,g){if(this.dashCd>0||this.reloadT>0)return;let d=n;if(!d.x&&!d.y)d={x:Math.cos(this.a),y:Math.sin(this.a)};this.dashTimer=.13;this.dashCd=this.dashCooldown;this.invuln=.12;this.dashV={x:d.x*640,y:d.y*640};g.audio.play('dash');g.shake(3);}
-  shoot(g){const w=this.current;if(w.ammo<=0){this.attackCd=.18;g.audio.play('empty');return}w.ammo--;this.attackCd=w.rate;g.fireWeapon(this,w,this.a);if(w.ammo===0)this.attackCd+=.04;}
+  shoot(g){const w=this.current;if(w.ammo<=0){this.attackCd=.18;g.audio.play('empty');return}w.ammo--;this.attackCd=w.rate*this.rateMul;g.fireWeapon(this,w,this.a);if(w.ammo===0)this.attackCd+=.04;}
   melee(g){this.attackCd=this.current.rate;g.meleeAttack(this,this.current,this.a);}
-  reload(g){const w=this.current;if(w.kind!=='gun'||w.ammo>=w.mag||w.reserve<=0||this.reloadT>0)return;this.reloadT=w.reload*this.reloadMul;this.reloadWeapon=w;g.audio.play('reload');}
+  reload(g){const w=this.current;if(w.kind!=='gun'||w.ammo>=this.magOf(w)||w.reserve<=0||this.reloadT>0)return;this.reloadT=w.reload*this.reloadMul;this.reloadWeapon=w;g.audio.play('reload');}
   throwCurrent(g){if(!this.current||this.current.unthrowable)return;const thrown=this.current;g.throwWeapon(this,thrown,this.a);this.current=this.previous||makeWeapon('fists');this.previous=null;this.attackCd=.38;this.reloadT=0;this.reloadWeapon=null;}
   equip(w,g){if(this.current){this.previous=this.current}this.current=w;this.reloadT=0;this.reloadWeapon=null;g.audio.play('pickup');}
   swap(g){if(!this.previous)return;[this.current,this.previous]=[this.previous,this.current];this.reloadT=0;this.reloadWeapon=null;g.audio.play('ui');}

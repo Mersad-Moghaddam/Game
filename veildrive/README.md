@@ -50,7 +50,7 @@ The boss, **THE PORTER**, wears a keyhole-shaped service mask and changes combat
 
 Five missions play back-to-back: **MOTEL STATIC** (the original room-to-room motel), **THE NEON ROOM**, **COLD STORAGE**, **LAST TRAIN** and **THE PORTER**. Each is a data-driven single floor (`src/data/missions.js`) with its own neon mood, enemy roster and objective — clear the floor, retrieve an item, assassinate the marked target, or kill the boss. Finishing the objective lights an **EXIT**; reaching it clears the mission, then a short interlude and an upgrade choice lead into the next mission. Dying rewinds the current mission instantly. Clearing all five shows the campaign grade.
 
-Combat is intentionally brutal and fast: the player has 3 HP, grunts die in a single hit, elites take two, and enemies react quickly.
+Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a **9mm Pistol** (melee weapons are still available as pickups for silent work), has 3 HP, grunts die in a single hit, elites take two, and enemies react quickly. Between missions you pick an upgrade; the pool includes stacking **gun mods** — HOT LOAD (+damage), HAIR TRIGGER (+fire rate), EXTENDED MAG (+magazine) and ARMOR PIERCING (+pierce) — so your firearms get stronger run after run.
 
 ## Implemented systems
 
@@ -58,6 +58,7 @@ Combat is intentionally brutal and fast: the player has 3 HP, grunts die in a si
 - Tight top-down movement, normalized diagonals, aim look-ahead, dash, invulnerability window
 - Melee, firearms, reloads, recoil feedback, muzzle flashes, tracers, thrown weapons
 - Distinct weapon data: fists, baton, cleaver, bottle, pistol, suppressed pistol, shotgun, SMG, revolver
+- Starts armed with the 9mm Pistol; stacking gun mods (damage, fire rate, magazine size, armor piercing)
 - Magazine + reserve ammunition
 - Door opening and violent breaches
 - Breakable furniture/glass and environmental collision
