@@ -29,8 +29,18 @@ export class Level{
     this.zones = [{ x: 0, y: 0, w: this.w, h: this.h, type: 'interior', mood: this.mood }];
     if(this.goal.type === 'retrieve') this.objective = { x: this.goal.x, y: this.goal.y, taken: false, label: this.goal.label || 'OBJECTIVE' };
   }
-  markDirty(){ this.dirty = true; }
+  markDirty(){ this.dirty = true; this._blockersDirty = true; }
   zoneAt(){ return this.mood; }
+  // Cached collision blocker list. Movement and line-of-sight query this many
+  // times per frame, so rebuilding it each call caused needless allocation and
+  // GC hitching. It is rebuilt only when geometry changes (markDirty).
+  blockers(){
+    if(this._blockersDirty || !this._blockers){
+      this._blockers = [...this.walls, ...this.props.filter(p=>p.solid&&!p.broken), ...this.doors.filter(d=>!d.open&&!d.broken)];
+      this._blockersDirty = false;
+    }
+    return this._blockers;
+  }
   // Direction from the spawn toward the entry-room door, used so the player
   // always starts (and respawns) facing the way out.
   entryFacing(){ let best=null,bd=Infinity; for(const d of this.doors){const dd=Math.hypot(d.x+d.w/2-this.def.spawn.x,d.y+d.h/2-this.def.spawn.y);if(dd<bd){bd=dd;best=d}} return best?Math.atan2(best.y+best.h/2-this.def.spawn.y,best.x+best.w/2-this.def.spawn.x):0 }
@@ -45,7 +55,6 @@ export class Level{
     }
     return { x, y };
   }
-  blockers(){return [...this.walls,...this.props.filter(p=>p.solid&&!p.broken),...this.doors.filter(d=>!d.open&&!d.broken)];}
   blocked(x,y,r=12){if(x-r<0||y-r<0||x+r>this.w||y+r>this.h)return true;return this.blockers().some(o=>circleRect(x,y,r,o));}
   moveCircle(e,dx,dy,r=e.r||12){let nx=e.x+dx;if(!this.blocked(nx,e.y,r))e.x=nx;let ny=e.y+dy;if(!this.blocked(e.x,ny,r))e.y=ny;}
   lineBlocked(a,b){return this.blockers().some(o=>segRect(a.x,a.y,b.x,b.y,o));}
@@ -54,7 +63,11 @@ export class Level{
   openDoor(d,kick=false){if(!d)return;d.open=true;if(kick)d.broken=true;this.markDirty();}
   damageProp(o,dmg=1){if(!o||!('hp'in o)||o.broken)return false;o.hp-=dmg;if(o.hp<=0){o.broken=true;o.solid=false;this.markDirty();return true}return false;}
   paintDecal(ctx,d){ctx.globalAlpha=d.a;ctx.fillStyle=COLORS.bloodDark;ctx.beginPath();ctx.ellipse(d.x,d.y,d.r,d.r*.65,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
-  paintCorpse(ctx,c){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.a);ctx.fillStyle='rgba(0,0,0,.5)';ctx.beginPath();ctx.ellipse(0,0,15,10,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2a1030';ctx.fillRect(-11,-7,22,14);ctx.fillStyle=COLORS.ink;ctx.fillRect(-9,-6,18,12);ctx.fillStyle=COLORS.blood;ctx.beginPath();ctx.arc(6,0,5,0,Math.PI*2);ctx.fill();ctx.restore();}
+  paintCorpse(ctx,c){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.a);ctx.fillStyle='rgba(0,0,0,.5)';ctx.beginPath();ctx.ellipse(0,0,c.kind==='opened'?22:15,c.kind==='opened'?16:10,0,0,Math.PI*2);ctx.fill();
+    if(c.kind==='opened'){ctx.fillStyle=COLORS.bloodDark;ctx.beginPath();ctx.ellipse(0,0,26,18,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2a1030';ctx.fillRect(-10,-5,20,10);ctx.fillStyle=COLORS.ink;ctx.fillRect(-8,-4,16,8);ctx.fillStyle=COLORS.blood;ctx.fillRect(-4,-6,8,12)}
+    else if(c.kind==='decap'){ctx.fillStyle=COLORS.bloodDark;ctx.beginPath();ctx.ellipse(6,0,14,9,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2a1030';ctx.fillRect(-11,-6,20,13);ctx.fillStyle=COLORS.ink;ctx.fillRect(-9,-5,16,11);ctx.fillStyle=COLORS.blood;ctx.beginPath();ctx.arc(7,0,4,0,Math.PI*2);ctx.fill()}
+    else{ctx.fillStyle='#2a1030';ctx.fillRect(-11,-7,22,14);ctx.fillStyle=COLORS.ink;ctx.fillRect(-9,-6,18,12);ctx.fillStyle=COLORS.blood;ctx.beginPath();ctx.arc(6,0,5,0,Math.PI*2);ctx.fill()}
+    ctx.restore();}
   draw(ctx){this.bake(ctx);}
   bake(ctx){
     ctx.save();

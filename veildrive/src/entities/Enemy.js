@@ -60,7 +60,7 @@ export class Enemy{
    }
  }
  updateBurst(dt,g,p){if(this.burst<=0)return;this.burstT-=dt;if(this.burstT>0)return;this.burst--;this.burstT=.13;if(this.state==='COMBAT'&&p&&!p.dead&&!g.level.lineBlocked(this,p)){const to=Math.atan2(p.y-this.y,p.x-this.x);g.enemyShoot(this,this.weapon,to+rand(-.07,.07));}}
- damage(n,g,angle=0,knock=110){if(this.dead)return;this.hp-=n;this.state='COMBAT';this.stun=.08;this.knockX=Math.cos(angle)*knock;this.knockY=Math.sin(angle)*knock;if(this.hp<=0){this.dead=true;g.onEnemyKilled(this,angle)}else{g.fx.blood(this.x,this.y,7,angle);g.shake(2)}}
+ damage(n,g,angle=0,knock=110){if(this.dead)return;this.hp-=n;this.state='COMBAT';this.stun=.08;this.knockX=Math.cos(angle)*knock;this.knockY=Math.sin(angle)*knock;if(this.hp<=0){this.dead=true;g.onEnemyKilled(this,angle,n)}else{g.fx.blood(this.x,this.y,7,angle);g.shake(2)}}
  stunHit(g,angle,power=180){if(this.dead)return;this.stun=.72;this.state='COMBAT';this.knockX=Math.cos(angle)*power;this.knockY=Math.sin(angle)*power;g.fx.burst(this.x,this.y,7,'#d6d0b7',100,.35,3)}
  draw(ctx,debug=false){if(this.dead)return;
    const pose=this.weapon.kind==='gun'?'gun':'melee';

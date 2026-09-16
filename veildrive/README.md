@@ -26,14 +26,14 @@ The build is written to `dist/`.
 
 - `WASD` — move
 - `Mouse` — aim
-- `Left Click` — shoot / melee
+- `Left Click` — shoot / melee (hold to keep firing or swinging; an empty gun auto-reloads if reserve remains)
 - `Right Click` — throw held weapon
 - `Shift` — dash
 - `E` — pick up weapon / quietly open door / take objective
 - `Space` — breach door / execute stunned enemy
 - `R` — reload
 - `Q` — quick-swap current and previous weapon
-- `Esc` — pause / back
+- `Esc` — pause menu (resume / restart mission / quit) / back
 - `1 / 2 / 3` — choose upgrade
 - `F1` — debug overlay / AI vision cones
 - `F2` — debug invincibility
@@ -48,7 +48,7 @@ The boss, **THE PORTER**, wears a keyhole-shaped service mask and changes combat
 
 ## Campaign
 
-Five missions play back-to-back: **MOTEL STATIC** (the original room-to-room motel), **THE NEON ROOM**, **COLD STORAGE**, **LAST TRAIN** and **THE PORTER**. Each is a data-driven single floor (`src/data/missions.js`) with its own neon mood, enemy roster and objective — clear the floor, retrieve an item, assassinate the marked target, or kill the boss. **Every mission opens with the player sealed in an empty entry room** dressed as a floor entrance (a mat, a floor sign and an arrow pointing to the breachable door into the action); finishing the objective lights an **EXIT**; reaching it clears the mission, then a short interlude and an upgrade choice lead into the next mission. Dying rewinds the current mission instantly. Clearing all five shows the campaign grade.
+Five missions play back-to-back: **MOTEL STATIC** (the original room-to-room motel), **THE NEON ROOM**, **COLD STORAGE**, **LAST TRAIN** and **THE PORTER**. Each is a data-driven single floor (`src/data/missions.js`) with its own neon mood, enemy roster and objective — clear the floor, retrieve an item, assassinate the marked target, or kill the boss. **Every mission opens with the player sealed in an empty entry room** dressed as a floor entrance (a mat, a floor sign and an arrow pointing to the breachable door into the action) and a **mission intro card** (number, name, briefing, objective and hostile count) that fades as the action starts; finishing the objective lights an **EXIT**; reaching it clears the mission, then a short interlude (time, hostiles down, score and next mission) and an upgrade choice lead into the next mission. The HUD tracks **HOSTILES remaining** and draws **neon off-screen chevrons** toward the objective/exit and any enemy in combat, so you always know where the fight is. **Esc opens a pause menu** (resume, restart the mission, or quit to menu). Dying rewinds the current mission instantly. Clearing all five shows the campaign grade.
 
 Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a **9mm Pistol** (melee weapons are still available as pickups for silent work), has 3 HP, grunts die in a single hit, elites take two, and enemies react quickly. Between missions you pick an upgrade; the pool includes stacking **gun mods** — HOT LOAD (+damage), HAIR TRIGGER (+fire rate), EXTENDED MAG (+magazine) and ARMOR PIERCING (+pierce) — so your firearms get stronger run after run.
 
@@ -56,15 +56,17 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 
 - 60 FPS delta-time game loop and responsive 16:9 letterboxing
 - Tight top-down movement, normalized diagonals, aim look-ahead, dash, invulnerability window
-- Melee, firearms, reloads, recoil feedback, muzzle flashes, tracers, thrown weapons
-- Distinct weapon data: fists, baton, cleaver, bottle, pistol, suppressed pistol, shotgun, SMG, revolver
+- Melee, firearms, reloads, recoil feedback, muzzle flashes, tracers, thrown weapons, shell casings and muzzle smoke
+- Grounded-but-arcade gun handling: per-weapon **aim recoil** (muzzle climb that recovers), **spread bloom** that builds while firing, a physical **kick**, **pump/slide cycle** time, **penetration** (the revolver punches through), a **visible reload state** and distinct reload timings
+- Distinct weapon data: fists, baton, cleaver, bottle, pistol, suppressed pistol, shotgun, SMG, revolver — melee weapons are available at pickups in every mission
 - Every weapon is drawn as its own silhouette (held, thrown, on the floor and in the HUD), with a coloured ground glow so pickups read by type at a glance
 - Starts armed with the 9mm Pistol; stacking gun mods (damage, fire rate, magazine size, armor piercing)
 - Smarter enemy AI: predictive aim for hunters/elites, elite burst fire, closing distance to regain line of sight, patrol pauses, and jitter-free obstacle steering
 - Magazine + reserve ammunition
 - Door opening and violent breaches
 - Breakable furniture/glass and environmental collision
-- Blood decals, growing pools, gibs, particles, debris, impact effects, afterimages and heavy screen shake
+- HM2-max gore: directional blood, growing pools, **dismemberment** (flying limbs and heads), **arterial jets**, overkill deaths that tear a body open, and persistent **intact / decapitated / opened** corpses — all behind the `BLOOD FX` toggle
+- Blood decals, gibs, particles, debris, impact effects, afterimages and heavy screen shake
 - Hit stop for kills, melee impacts, executions and boss death
 - Enemy states: patrol, investigate, search, combat, stunned
 - Vision cone, line of sight, hearing, reaction delay and local alert propagation
@@ -80,7 +82,7 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 - Explosive environmental barrels and persistent enemy bodies that can alert other guards
 - Combo/chain scoring and end-of-mission grading
 - LocalStorage versioned save for settings, run count, best score and rank
-- Settings/accessibility controls for volume, screen shake, blood, graphics quality, post effects, flashing and high-contrast cursor
+- Settings/accessibility controls for volume, screen shake, blood, graphics quality, post effects, **PIXEL WORLD** (switch between the HM2 pixel look and the crisp 960×540 design), flashing and high-contrast cursor
 - Pause, focus loss handling, instant mission rewind on death
 - Developer/debug tools
 
@@ -91,17 +93,18 @@ The game is simulated entirely in 2D and rendered through a GPU pipeline with a 
 - **Three.js (r186)** is vendored under `vendor/` and loaded with an import map in `index.html` — no bundler and no CDN. `scripts/build.mjs` copies `vendor/` into `dist/`.
 - **Layer model.** Each frame the existing Canvas-2D drawing code renders two 960×540 offscreen canvases: *albedo* (the lit scene) and *emissive* (glow only). Both become `CanvasTexture`s on full-screen quads in an `OrthographicCamera` scene.
 - **Lighting.** A custom `ShaderPass` (`src/render/shaders.js`) combines `albedo × lights + emissive` using up to 16 mood-coloured lights plus ambient. Lights flicker and brighten on the beat; `src/render/mood.js` holds the four mood palettes (`sunset`, `violet`, `toxic`, `blood`) used per zone.
-- **Post.** `EffectComposer`: render → lighting → `UnrealBloomPass` (neon bloom) → CRT/VHS pass (chromatic aberration, scanlines, barrel distortion, vignette, grain, glitch bursts on damage/explosions) → `OutputPass`.
+- **Pixel pipeline.** The world renders internally at **480×270** (`PIXEL = 2`) and is upscaled with nearest-neighbour, so pixels are chunky and crisp like Hotline Miami 2. Simulation and HUD coordinates stay 960×540 (layer contexts get a `1/PIXEL` scale), so no gameplay math changed. The UI canvas stays 960×540 so text reads clearly. The **PIXEL WORLD** setting toggles this at runtime: off restores the previous crisp 1:1 design and on returns to the pixel look.
+- **Post.** `EffectComposer`: render → lighting → `UnrealBloomPass` (neon bloom) → CRT/VHS pass (chromatic aberration, scanlines, barrel distortion, vignette, grain, glitch bursts on damage/explosions) → `OutputPass`. A palette-quantise + 2×2 ordered dither step gives the limited-colour, banded pixel-art look.
 - **UI overlay.** HUD, menus, results and upgrade screens draw to a separate `#ui` 2D canvas stacked above the WebGL canvas, so text stays crisp and undistorted.
 - **Static bake.** The environment is baked once into a world-sized canvas (`Level.bake`) and blitted per frame; blood pools, corpses and broken props are painted into it and it is re-baked only when something static changes.
 - **Fallback.** If WebGL is unavailable, `main.js` skips Three.js entirely and the original Canvas-2D path renders the game, so it always runs.
 
-Debug/quality: `settings.post` toggles the bloom/CRT chain; `settings.quality` reduces lights and effects; `prefers-reduced-motion` disables scanline roll, grain and glitch. The internal resolution stays 960×540 (no pixelation downscale).
+Debug/quality: `settings.post` toggles the bloom/CRT chain; `settings.quality` reduces lights, effects, scanline and dither; `prefers-reduced-motion` disables scanline roll, grain and glitch. Pointer input is mapped from the canvas backing store to the 960×540 virtual space so aiming is unaffected by the pixel downscale. The Canvas-2D fallback (no WebGL) applies the same low-res-then-upscale pixelation.
 
 ## Testing
 
-- `npm test` — unit suite (Node, no browser): math, save persistence, weapon/upgrade data, mood palettes, level collision and line-of-sight, every mission's structural invariants (clear empty entry room, a door within reach, no pickup shadows a door, and every enemy/waypoint/exit/objective reachable by a player-sized flood fill), player/enemy/boss behaviour, gore caps and the art helpers.
-- `npm run test:scenario` — end-to-end scenarios in headless Chromium (skips if Playwright is absent): boot, menu/settings/credits, spawn on the entry mat facing the door with a shield, firing, kills, pickups, barrels, objective → exit → interlude → upgrade → next mission, the boss finale, death respawn on the entry mat, save persistence across reload, pause, idle-still enemies, resize, and the no-WebGL Canvas fallback.
+- `npm test` — unit suite (Node, no browser): math, save persistence, weapon/upgrade data (including gun recoil/bloom/kick/penetration invariants and deep-copy safety), mood palettes, level collision and line-of-sight, every mission's structural invariants (clear empty entry room, a door within reach, **doors stay in bounds and never overlap walls, and every opened door is traversable**, no pickup shadows a door, valid/self-consistent goals, every enemy/waypoint/exit/objective reachable by a player-sized flood fill), player/enemy/boss behaviour (firing builds and recovers bloom/recoil), gore caps and **dismemberment/limb settling**, and the art helpers.
+- `npm run test:scenario` — end-to-end scenarios in headless Chromium (skips if Playwright is absent): boot, the **480×270 pixel pipeline**, menu/settings/credits, spawn on the entry mat facing the door with a shield, firing, kills, gun casings/bloom/penetration, pickups, barrels, objective → exit → interlude → upgrade → next mission, the boss finale, **overkill dismemberment**, death respawn on the entry mat, the **heartbeat cue at 1 HP**, off-screen markers, save persistence across reload, pause + **pause-menu restart/quit**, idle-still enemies, resize, and the no-WebGL Canvas fallback.
 - `npm run verify` — a fast headless render probe (WebGL context, non-blank frame, no console errors).
 
 ## Architecture
@@ -129,6 +132,7 @@ src/
     shaders.js    GLSL for the lighting and CRT/VHS passes
     mood.js       Per-zone neon palettes and beat-pulse colour helper
     humanoid.js   Shared Hotline Miami-style humanoid sprite/animation renderer
+    weapons-art.js Per-weapon procedural silhouettes (held, thrown, floor, HUD)
   data/
     missions.js   The five mission definitions (floors, rosters, objectives, moods)
     config.js     Settings, palette and upgrade definitions

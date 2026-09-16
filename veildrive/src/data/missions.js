@@ -28,13 +28,13 @@ export const MISSIONS = [
       W(870, 128, 28, 152), W(870, 350, 28, 50), W(1160, 128, 28, 122), W(1160, 320, 28, 80),
       W(358, 400, 112, 28), W(548, 400, 322, 28), W(898, 400, 262, 28), W(1160, 400, 382, 28),
       W(650, 548, 28, 132), W(650, 754, 28, 138), W(960, 548, 28, 82), W(960, 704, 28, 188), W(1210, 548, 28, 142), W(1210, 770, 28, 122),
-      W(1210, 690, 110, 28), W(1395, 690, 147, 28),
+      W(1238, 690, 82, 28), W(1395, 690, 147, 28),
       W(10, 400, 260, 24), W(10, 616, 260, 24), W(10, 400, 24, 240), W(246, 400, 24, 100), W(246, 572, 24, 68)
     ],
     doors: [
       D(650, 300, 28, 72), D(578, 520, 80, 28), D(868, 520, 80, 28), D(1158, 520, 80, 28),
       D(470, 400, 78, 28), D(870, 280, 28, 70), D(1160, 250, 28, 70),
-      D(650, 680, 28, 74), D(960, 630, 28, 74), D(1210, 696, 28, 74), D(1320, 690, 75, 28),
+      D(650, 680, 28, 74), D(960, 630, 28, 74), D(1210, 690, 28, 80), D(1320, 690, 75, 28),
       D(246, 500, 24, 72)
     ],
     props: [
@@ -46,7 +46,7 @@ export const MISSIONS = [
       P(805, 400, 12, 28, 'glass', false, 1), P(1110, 400, 12, 28, 'glass', false, 1), P(650, 610, 12, 50, 'glass', false, 1)
     ],
     lights: [L(500, 260, 190), L(760, 290, 150), L(1030, 280, 150), L(1320, 270, 170), L(760, 680, 170), L(1080, 690, 160), L(1380, 790, 180), L(150, 520, 150)],
-    pickups: [{ x: 400, y: 570, weapon: 'baton' }, { x: 750, y: 245, weapon: 'pistol' }, { x: 1010, y: 760, weapon: 'shotgun' }, { x: 1375, y: 230, weapon: 'suppressed' }],
+    pickups: [{ x: 400, y: 570, weapon: 'baton' }, { x: 750, y: 245, weapon: 'pistol' }, { x: 1010, y: 760, weapon: 'shotgun' }, { x: 1375, y: 230, weapon: 'suppressed' }, { x: 500, y: 700, weapon: 'cleaver' }, { x: 300, y: 650, weapon: 'bottle' }, { x: 1240, y: 640, weapon: 'revolver' }],
     enemies: [
       E(250, 320, 'guard', [{ x: 230, y: 300 }, { x: 290, y: 360 }]),
       E(510, 250, 'guard', [{ x: 450, y: 250 }, { x: 602, y: 250 }]),
@@ -90,7 +90,7 @@ export const MISSIONS = [
       P(600, 480, 12, 28, 'glass', false, 1)
     ],
     lights: [L(600, 300, 230), L(250, 180, 150), L(950, 180, 150), L(250, 580, 150), L(950, 580, 150), L(110, 380, 140)],
-    pickups: [{ x: 280, y: 400, weapon: 'baton' }, { x: 1050, y: 120, weapon: 'pistol' }, { x: 1050, y: 640, weapon: 'smg' }],
+    pickups: [{ x: 280, y: 400, weapon: 'baton' }, { x: 1050, y: 120, weapon: 'pistol' }, { x: 1050, y: 640, weapon: 'smg' }, { x: 300, y: 650, weapon: 'bottle' }, { x: 900, y: 90, weapon: 'cleaver' }],
     enemies: [
       E(600, 250, 'brawler', [{ x: 540, y: 240 }, { x: 660, y: 300 }]),
       E(470, 300, 'guard', [{ x: 418, y: 260 }, { x: 540, y: 360 }]),
@@ -133,7 +133,7 @@ export const MISSIONS = [
       P(1200, 200, 24, 24, 'barrel', true, 1), P(1200, 700, 44, 44, 'vending')
     ],
     lights: [L(350, 250, 170), L(600, 250, 170), L(850, 250, 170), L(1100, 250, 170), L(650, 700, 200), L(135, 220, 150)],
-    pickups: [{ x: 120, y: 500, weapon: 'pistol' }, { x: 800, y: 120, weapon: 'shotgun' }, { x: 1240, y: 740, weapon: 'smg' }, { x: 600, y: 740, weapon: 'baton' }],
+    pickups: [{ x: 120, y: 500, weapon: 'pistol' }, { x: 800, y: 120, weapon: 'shotgun' }, { x: 1240, y: 740, weapon: 'smg' }, { x: 600, y: 740, weapon: 'baton' }, { x: 1100, y: 740, weapon: 'cleaver' }],
     enemies: [
       E(350, 150, 'guard', [{ x: 300, y: 140 }, { x: 420, y: 300 }]),
       E(350, 560, 'brawler', [{ x: 300, y: 500 }, { x: 420, y: 680 }]),
@@ -174,7 +174,7 @@ export const MISSIONS = [
       P(600, 300, 12, 28, 'glass', false, 1)
     ],
     lights: [L(200, 350, 170), L(500, 120, 150), L(500, 580, 150), L(1000, 120, 150), L(1000, 580, 150), L(1300, 350, 180), L(110, 350, 150)],
-    pickups: [{ x: 150, y: 640, weapon: 'pistol' }, { x: 760, y: 640, weapon: 'shotgun' }, { x: 100, y: 80, weapon: 'baton' }],
+    pickups: [{ x: 150, y: 640, weapon: 'pistol' }, { x: 760, y: 640, weapon: 'shotgun' }, { x: 100, y: 80, weapon: 'baton' }, { x: 1310, y: 640, weapon: 'revolver' }, { x: 620, y: 90, weapon: 'bottle' }],
     enemies: [
       E(1300, 350, 'elite', [{ x: 1260, y: 320 }, { x: 1340, y: 420 }]),
       E(1180, 290, 'guard', [{ x: 1140, y: 280 }, { x: 1240, y: 320 }]),
@@ -215,7 +215,7 @@ export const MISSIONS = [
       P(520, 380, 24, 24, 'barrel', true, 1)
     ],
     lights: [L(250, 250, 180), L(650, 250, 190), L(1000, 250, 180), L(250, 600, 180), L(900, 600, 180), L(120, 400, 150)],
-    pickups: [{ x: 300, y: 180, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 700, weapon: 'shotgun' }, { x: 1080, y: 120, weapon: 'suppressed' }],
+    pickups: [{ x: 300, y: 180, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 700, weapon: 'shotgun' }, { x: 1080, y: 120, weapon: 'suppressed' }, { x: 700, y: 660, weapon: 'cleaver' }, { x: 520, y: 200, weapon: 'revolver' }],
     enemies: [
       E(600, 200, 'elite', [{ x: 560, y: 180 }, { x: 680, y: 260 }]),
       E(600, 600, 'shotgunner', [{ x: 560, y: 560 }, { x: 680, y: 660 }]),

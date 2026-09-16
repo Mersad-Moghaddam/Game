@@ -64,6 +64,28 @@ try {
   ok('boot: game object present', !boot.missing);
   ok('boot: no console errors on load', errors.length === 0, errors[0] || '');
 
+  // --- pixel pipeline: world renders at half resolution and upscales ---
+  const pix = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    const gl = document.getElementById('gl');
+    return { ow: g.renderer && g.renderer.ow, oh: g.renderer && g.renderer.oh, glw: gl.width, glh: gl.height, avail: !!(g.renderer && g.renderer.available) };
+  });
+  ok('pixel: world renders at 480x270 for chunky upscaling', !pix.avail || (pix.ow === 480 && pix.oh === 270 && pix.glw === 480 && pix.glh === 270), JSON.stringify(pix));
+
+  // --- the PIXEL WORLD setting switches between the HM2 pixel look and the
+  //     previous crisp 960x540 design at runtime ---
+  const pixTog = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    if (!(g.renderer && g.renderer.available)) return { skipped: true };
+    const on = g.renderer.ow;
+    g.settings.pixel = false; g.applyRenderSettings();
+    const off = g.renderer.ow;
+    g.settings.pixel = true; g.applyRenderSettings();
+    const back = g.renderer.ow;
+    return { on, off, back };
+  });
+  ok('pixel: PIXEL WORLD toggles between crisp and pixel rendering', pixTog.skipped || (pixTog.on === 480 && pixTog.off === 960 && pixTog.back === 480), JSON.stringify(pixTog));
+
   // --- menu: masks, settings, credits ---
   await evalG(() => { const g = window.__VEILDRIVE__; g.save.unlockedMasks = ['MOTH-0', 'RAM-7']; g.save.selectedMask = 'MOTH-0'; });
   await evalG(() => { window.__VEILDRIVE__.menuIndex = 1; });
@@ -139,6 +161,18 @@ try {
   const afterShot = await snap();
   ok('combat: firing consumes ammo and counts shots', afterShot.shots > beforeShot.shots && afterShot.ammo < beforeShot.ammo, JSON.stringify({ shots: afterShot.shots, ammo: afterShot.ammo }));
 
+  // --- grounded gun handling: casings, bloom, penetration ---
+  const gunfeel = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    const rev = g.level.pickups.find(x => x.weapon.id === 'revolver');
+    const pist = g.level.pickups.find(x => x.weapon.id === 'pistol');
+    const out = {};
+    if (pist) { g.player.equip(pist.weapon, g); g.player.bloom = 0; g.fx.casings.length = 0; g.player.shoot(g); out.casings = g.fx.casings.length; out.bloom = g.player.bloom; }
+    if (rev) { g.player.equip(rev.weapon, g); g.player.pierce = 0; g.player.bloom = 0; g.projectiles.length = 0; g.player.shoot(g); out.pierce = g.projectiles[0] ? g.projectiles[0].pierce : null; }
+    return out;
+  });
+  ok('weapons: guns eject casings, build bloom and penetrate', gunfeel.casings > 0 && gunfeel.bloom > 0 && gunfeel.pierce >= 1, JSON.stringify(gunfeel));
+
   // --- killing an enemy gives combo/score ---
   const killed = await evalG(() => {
     const g = window.__VEILDRIVE__;
@@ -199,13 +233,13 @@ try {
   // --- kills spill blood and gibs ---
   const gore = await evalG(() => {
     const g = window.__VEILDRIVE__;
-    const d0 = g.fx.decals.length, p0 = g.fx.p.length;
+    const d0 = g.fx.decals.length, p0 = g.fx.p.length, l0 = g.fx.limbs.length;
     const e = g.enemies.find(x => !x.dead);
     if (!e) return { skipped: true };
     e.damage(99, g, 0);
-    return { dd: g.fx.decals.length - d0, dp: g.fx.p.length - p0 };
+    return { dd: g.fx.decals.length - d0, dp: g.fx.p.length - p0, dl: g.fx.limbs.length - l0 };
   });
-  ok('gore: a kill spills blood, gibs and a pool', gore.skipped || (gore.dd > 0 && gore.dp > 0), JSON.stringify(gore));
+  ok('gore: an overkill dismembers, spills blood and pools', gore.skipped || (gore.dd > 0 && gore.dp > 0 && gore.dl > 0), JSON.stringify(gore));
 
   // --- several gun types fire ---
   const variety = await evalG(() => {
@@ -223,6 +257,63 @@ try {
     return { fired, kinds: [...seen] };
   });
   ok('weapons: different gun types fire', variety.fired > 0, JSON.stringify(variety));
+
+  // --- holding attack always attacks: guns fire, melee swings, in every mission ---
+  const holdAttack = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    const real = g.input;
+    g.input = { down: () => false, tap: () => false, endFrame() {}, mouse: { x: 900, y: 300, left: true, right: false, leftPressed: false, rightPressed: false, moved: true } };
+    const out = {};
+    for (let mi = 0; mi < 5; mi++) {
+      g.startMission(mi, true);
+      const gun = g.level.pickups.find(x => x.weapon.kind === 'gun');
+      const melee = g.level.pickups.find(x => x.weapon.kind === 'melee');
+      g.player.equip(gun.weapon, g); g.player.attackCd = 0; g.player.reloadT = 0;
+      const s0 = g.shots;
+      for (let i = 0; i < 45; i++) g.player.update(1 / 60, g);
+      const shots = g.shots - s0;
+      g.player.equip(melee.weapon, g); g.player.attackCd = 0;
+      const m0 = g.player.meleeSwings;
+      for (let i = 0; i < 60; i++) g.player.update(1 / 60, g);
+      out['m' + (mi + 1)] = { shots, swings: g.player.meleeSwings - m0 };
+    }
+    g.input = real;
+    return out;
+  });
+  ok('combat: holding attack fires and swings in every mission', Object.values(holdAttack).every(v => v.shots > 1 && v.swings > 1), JSON.stringify(holdAttack));
+
+  // --- a shotgun carried from mission 1 into mission 2 still fires ---
+  const carried = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(0, true);
+    const sg = g.level.pickups.find(x => x.weapon.id === 'shotgun');
+    g.player.equip(sg.weapon, g); g.player.attackCd = 0;
+    g.startMission(1, false);                    // the real upgrade -> next-mission transition
+    const real = g.input;
+    g.input = { down: () => false, tap: () => false, endFrame() {}, mouse: { x: 900, y: 300, left: true, right: false, leftPressed: false, rightPressed: false, moved: true } };
+    const s0 = g.shots;
+    for (let i = 0; i < 40; i++) g.player.update(1 / 60, g);
+    const shots = g.shots - s0;
+    g.input = real;
+    return { weapon: g.player.current.id, ammo: g.player.current.ammo, shots };
+  });
+  ok('combat: a shotgun carried into mission 2 fires on held attack', carried.weapon === 'shotgun' && carried.shots >= 7, JSON.stringify(carried));
+
+  // --- an empty magazine with reserve left auto-reloads instead of dead-clicking ---
+  const autoReload = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(1, true);
+    const gun = g.level.pickups.find(x => x.weapon.kind === 'gun');
+    g.player.equip(gun.weapon, g);
+    g.player.current.ammo = 0; g.player.current.reserve = 18; g.player.attackCd = 0; g.player.reloadT = 0;
+    const real = g.input;
+    g.input = { down: () => false, tap: () => false, endFrame() {}, mouse: { x: 900, y: 300, left: true, right: false, leftPressed: false, rightPressed: false, moved: true } };
+    g.player.update(1 / 60, g);
+    const reloading = g.player.reloadT > 0;
+    g.input = real;
+    return { reloading };
+  });
+  ok('combat: an empty gun auto-reloads on held attack', autoReload.reloading, JSON.stringify(autoReload));
 
   // --- boss mission: jump to the finale, kill the boss, finish ---
   await evalG(() => window.__VEILDRIVE__.startMission(4, true));
@@ -254,6 +345,23 @@ try {
   await sleep(150);
   ok('pause: escape resumes the run', (await evalG(() => window.__VEILDRIVE__.state)) === 'playing');
 
+  // --- pause menu: restart and quit ---
+  await page.keyboard.press('Escape'); await sleep(120);
+  await page.keyboard.press('ArrowDown');
+  const pIdx = await evalG(() => window.__VEILDRIVE__.pauseIndex);
+  ok('pause: menu selects restart', pIdx === 1, `index ${pIdx}`);
+  await page.keyboard.press('Enter');
+  const rstate = await waitFor(s => s.state === 'playing', 5000);
+  ok('pause: restart resumes the mission at full health', rstate.state === 'playing' && rstate.hp === 3, JSON.stringify(rstate));
+  await page.keyboard.press('Escape'); await sleep(120);
+  await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter'); await sleep(200);
+  ok('pause: quit returns to the menu', (await evalG(() => window.__VEILDRIVE__.state)) === 'menu');
+  await evalG(() => window.__VEILDRIVE__.startRun());
+  await waitFor(s => s.state === 'playing', 5000);
+  const intro = await evalG(() => ({ t: window.__VEILDRIVE__.introT, mission: window.__VEILDRIVE__.mission && window.__VEILDRIVE__.mission.id }));
+  ok('flow: mission intro card timer runs', Number.isFinite(intro.t) && !!intro.mission, JSON.stringify(intro));
+
   // --- idle enemies do not animate or shake ---
   const idle = await page.evaluate(async () => {
     const g = window.__VEILDRIVE__;
@@ -264,6 +372,29 @@ try {
     return { da: Math.abs(e.animT - a0), shake: g.shakeMag };
   });
   ok('enemy: idle enemies are still (no idle shake)', idle.da < 1e-6 && idle.shake < 0.01, JSON.stringify(idle));
+
+  // --- low-health heartbeat timer no longer becomes NaN ---
+  const heart = await page.evaluate(async () => {
+    const g = window.__VEILDRIVE__;
+    g.invincible = true; g.player.hp = 1; g.heartT = 0;
+    let beats = 0; const orig = g.audio.play ? g.audio.play.bind(g.audio) : null;
+    if (orig) g.audio.play = n => { if (n === 'heartbeat') beats++; return orig(n); };
+    await new Promise(r => setTimeout(r, 1400));
+    if (orig) g.audio.play = orig;
+    g.invincible = false;
+    return { beats, heartT: g.heartT, finite: Number.isFinite(g.heartT) };
+  });
+  ok('hud: low health keeps a finite heartbeat timer', heart.finite, JSON.stringify(heart));
+
+  // --- off-screen threat + objective markers draw without errors ---
+  const markers = await page.evaluate(async () => {
+    const g = window.__VEILDRIVE__;
+    const e = g.enemies.find(x => !x.dead);
+    if (e) { e.x = g.player.x + 3000; e.y = g.player.y; e.state = 'COMBAT'; }
+    await new Promise(r => setTimeout(r, 300));
+    return { hasMarkers: typeof g.drawMarkers === 'function', alive: g.enemies.filter(x => !x.dead).length };
+  });
+  ok('hud: markers survive an off-screen threat', markers.hasMarkers, JSON.stringify(markers));
 
   // --- resize does not throw ---
   await page.setViewportSize({ width: 900, height: 500 });

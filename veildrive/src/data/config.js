@@ -1,5 +1,11 @@
 export const VIRTUAL_W = 960;
 export const VIRTUAL_H = 540;
+// Pixel pipeline: the world renders at VIEW_W x VIEW_H and is upscaled with
+// nearest-neighbour. Simulation and UI coordinates stay in 960x540, so all
+// gameplay math and HUD layout are unchanged.
+export const PIXEL = 2;
+export const VIEW_W = VIRTUAL_W / PIXEL;
+export const VIEW_H = VIRTUAL_H / PIXEL;
 export const SAVE_KEY = 'veildrive-save-v1';
 export const COLORS = {
   void:'#0b0416', ground:'#1a0a33', ground2:'#2a1055', wall:'#3d1263', wallHi:'#8a35d6',
@@ -12,7 +18,7 @@ export const MASKS = [
   {id:'FOX-2',name:'FOX-2',desc:'Quieter movement and shorter enemy detection range.'},
   {id:'RAVEN-3',name:'RAVEN-3',desc:'Thrown weapons gain lethal impact damage.'}
 ];
-export const DEFAULT_SETTINGS = { master:0.9, music:0.5, sfx:0.85, shake:0.75, blood:true, quality:1, post:true, flashes:true, highContrastCursor:false };
+export const DEFAULT_SETTINGS = { master:0.9, music:0.5, sfx:0.85, shake:0.75, blood:true, quality:1, post:true, pixel:true, flashes:true, highContrastCursor:false };
 export const UPGRADES = [
   {id:'dash',name:'SECOND WIND',desc:'Dash recharge 28% faster.',apply:p=>p.dashCooldown*=0.72},
   {id:'speed',name:'HOT STEP',desc:'Move speed +12%.',apply:p=>p.moveSpeed*=1.12},

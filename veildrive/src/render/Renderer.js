@@ -4,7 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { VIRTUAL_W, VIRTUAL_H } from '../data/config.js';
+import { VIRTUAL_W, VIRTUAL_H, VIEW_W, VIEW_H } from '../data/config.js';
 import { LightingShader, CRTShader, MAX_LIGHTS } from './shaders.js';
 
 export class Renderer {
@@ -13,6 +13,8 @@ export class Renderer {
     this.canvas = glCanvas;
     this.w = VIRTUAL_W;
     this.h = VIRTUAL_H;
+    this.ow = VIEW_W;
+    this.oh = VIEW_H;
     this.quality = 1;
     this.postEnabled = true;
     try {
@@ -22,7 +24,7 @@ export class Renderer {
       return;
     }
     this.renderer.setPixelRatio(1);
-    this.renderer.setSize(this.w, this.h, false);
+    this.renderer.setSize(this.ow, this.oh, false);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.scene = new THREE.Scene();
@@ -46,10 +48,10 @@ export class Renderer {
     this.lightPass.uniforms.uResolution.value.set(this.w, this.h);
     this.composer.addPass(this.lightPass);
 
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(this.w, this.h), 0.9, 0.55, 0.62);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(this.ow, this.oh), 0.9, 0.55, 0.62);
     this.composer.addPass(this.bloom);
     this.crt = new ShaderPass(CRTShader);
-    this.crt.uniforms.uResolution.value.set(this.w, this.h);
+    this.crt.uniforms.uResolution.value.set(this.ow, this.oh);
     this.composer.addPass(this.crt);
     this.composer.addPass(new OutputPass());
     this.glitchT = 0;
@@ -100,6 +102,25 @@ export class Renderer {
     if (this.bloom) this.bloom.enabled = this.postEnabled;
     if (this.crt) this.crt.enabled = this.postEnabled;
   }
+  // Toggle the chunky low-resolution world on/off at runtime. Off renders the
+  // classic crisp 960x540 vector design; on renders 480x270 nearest-upscaled.
+  setPixelMode(on) {
+    if (!this.available) return;
+    const w = on ? VIEW_W : VIRTUAL_W;
+    const h = on ? VIEW_H : VIRTUAL_H;
+    if (this.ow === w && this.oh === h) return;
+    this.ow = w; this.oh = h;
+    for (const layer of [this.albedo, this.emissive]) {
+      layer.canvas.width = w; layer.canvas.height = h;
+      layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      layer.ctx.imageSmoothingEnabled = false;
+      layer.texture.needsUpdate = true;
+    }
+    this.renderer.setSize(w, h, false);
+    this.composer.setSize(w, h);
+    this.crt.uniforms.uResolution.value.set(w, h);
+    this.glitchT = 0;
+  }
   setQuality(q) {
     this.quality = q;
     if (this.bloom) this.bloom.strength = q < 0.5 ? 0.5 : 0.9;
@@ -107,13 +128,14 @@ export class Renderer {
       const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
       this.crt.uniforms.uScanline.value = (q < 0.5 || reduced) ? 0 : 0.10;
       this.crt.uniforms.uGrain.value = reduced ? 0 : 0.055;
+      this.crt.uniforms.uLevels.value = (q < 0.5) ? 0 : 30;
     }
   }
 
   setSize() {
     if (!this.available) return;
-    this.renderer.setSize(this.w, this.h, false);
-    this.composer.setSize(this.w, this.h);
+    this.renderer.setSize(this.ow, this.oh, false);
+    this.composer.setSize(this.ow, this.oh);
   }
 
   dispose() {
@@ -123,8 +145,8 @@ export class Renderer {
 
 function makeLayer(background) {
   const canvas = document.createElement('canvas');
-  canvas.width = VIRTUAL_W;
-  canvas.height = VIRTUAL_H;
+  canvas.width = VIEW_W;
+  canvas.height = VIEW_H;
   const ctx = canvas.getContext('2d', { alpha: false });
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = background;

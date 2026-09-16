@@ -225,9 +225,8 @@ test('player: gun mods stack', () => {
   UPGRADES.find(u => u.id === 'pierce').apply(p);
   assert(p.damageMul > 1); assert.equal(p.magOf(p.current), base + 3); assert.equal(p.pierce, 1);
 });
-const stubInput = { down: () => false, tap: () => false, mouse: { x: 0, y: 0, left: false, right: false, leftPressed: false, rightPressed: false } };
-function stubGame(player) {
-  return { input: stubInput, screenToWorld: (x, y) => ({ x, y }), level: { moveCircle() {}, blocked: () => false }, fx: { blood() {}, ghost() {} }, emitNoise() {}, audio: { play() {} }, interact() {}, fireWeapon() {}, meleeAttack() {}, throwWeapon() {}, shake() {}, player, renderer: null };
+function stubGame(player, left = false) {
+  return { input: { down: () => false, tap: () => false, mouse: { x: 0, y: 0, left, right: false, leftPressed: false, rightPressed: false } }, screenToWorld: (x, y) => ({ x, y }), level: { moveCircle() {}, blocked: () => false }, fx: { blood() {}, ghost() {} }, emitNoise() {}, audio: { play() {} }, interact() {}, fireWeapon() {}, meleeAttack() {}, throwWeapon() {}, shake() {}, player, renderer: null };
 }
 test('player: reload completes into the right weapon', () => {
   const p = new Player(0, 0); const g = stubGame(p);
@@ -258,6 +257,36 @@ test('player: damage respects invulnerability and kills', () => {
   p.damage(1, g, 0); assert.equal(p.hp, 2, 'invulnerable while i-frames active');
   p.invuln = 0; p.damage(5, g, 0);
   assert.equal(p.dead, true); assert.equal(died, true);
+});
+test('player: firing builds bloom/recoil, recoil climbs the aim, and both recover', () => {
+  const p = new Player(0, 0); const g = stubGame(p);
+  p.shoot(g);
+  assert(p.bloom > 0, 'firing should build bloom');
+  assert(Number.isFinite(p.recoil), 'recoil should stay finite');
+  const bloom = p.bloom, shots = p.current.ammo;
+  assert.equal(shots, 8, 'a shot should consume one round');
+  for (let i = 0; i < 60; i++) p.update(0.016, g);
+  assert(p.bloom < bloom, 'bloom should recover when not firing');
+});
+test('player: holding attack auto-fires a gun and auto-reloads an empty mag', () => {
+  const p = new Player(0, 0); const g = stubGame(p, true);
+  const startAmmo = p.current.ammo;
+  for (let i = 0; i < 60; i++) p.update(1 / 60, g);
+  assert(p.current.ammo < startAmmo, 'held fire should consume ammo');
+  assert(p.current.ammo > 0, 'should not have emptied in one second');
+  p.current.ammo = 0; p.current.reserve = 18; p.attackCd = 0; p.reloadT = 0;
+  p.update(1 / 60, g);
+  assert(p.reloadT > 0, 'an empty gun must auto-reload on held fire when reserve remains');
+  g.input.mouse.left = false;
+  for (let i = 0; i < 120; i++) p.update(1 / 60, g);
+  assert.equal(p.current.ammo, p.magOf(p.current), 'auto-reload should refill the magazine');
+});
+test('player: holding attack swings a melee weapon repeatedly', () => {
+  const p = new Player(0, 0); const g = stubGame(p, true);
+  p.current = makeWeapon('baton');
+  const before = p.meleeSwings;
+  for (let i = 0; i < 90; i++) p.update(1 / 60, g);
+  assert(p.meleeSwings - before > 1, `held melee should swing repeatedly (${p.meleeSwings - before})`);
 });
 test('player: dash sets cooldown and i-frames', () => {
   const p = new Player(0, 0); const g = stubGame(p);
@@ -464,6 +493,17 @@ test('fx: gibs add particles and blood, and blood pools', () => {
   fx.blood(0, 0, 20, 0);
   assert(fx.decals.length > before, 'blood should add decals');
 });
+test('fx: dismemberment gore adds limbs/arterial and respects the toggle', () => {
+  const fx = new FX(); fx.arterial(0, 0, 0); fx.limb(0, 0, 0, 'arm'); fx.headPop(0, 0, 0);
+  assert(fx.limbs.length > 0 && fx.p.length > 0 && fx.decals.length > 0, 'gore should be emitted');
+  const off = new FX(); off.bloodEnabled = false; off.arterial(0, 0, 0); off.limb(0, 0, 0); off.headPop(0, 0, 0);
+  assert.equal(off.limbs.length, 0); assert.equal(off.p.length, 0); assert.equal(off.decals.length, 0);
+});
+test('fx: limbs settle into painted decals', () => {
+  const fx = new FX(); fx.limb(0, 0, 0, 'head'); fx.update(5);
+  assert.equal(fx.limbs.length, 0, 'limbs should expire');
+  assert(fx.decals.length > 0, 'settled limbs should leave a decal');
+});
 test('fx: blood can be disabled', () => {
   const fx = new FX(); fx.bloodEnabled = false; fx.blood(0, 0, 20); fx.gib(0, 0, 0, 10);
   assert.equal(fx.p.length, 0); assert.equal(fx.decals.length, 0);
@@ -523,6 +563,86 @@ test('player: reload takes at most the ammo left in reserve', () => {
   const p = new Player(0, 0); const g = stubGame(p);
   p.current.ammo = 0; p.current.reserve = 1; p.reload(g); p.reloadT = 0.001; p.update(0.01, g);
   assert.equal(p.current.ammo, 1); assert.equal(p.current.reserve, 0);
+});
+
+// --------------------------------------------------- strict invariants
+test('weapons: makeWeapon deep-copies the definition table', () => {
+  const w = makeWeapon('pistol');
+  w.damage = 999; w.ammo = 0; w.reserve = 0;
+  const w2 = makeWeapon('pistol');
+  assert.equal(WEAPONS.pistol.damage, 1, 'the data table was mutated by a runtime weapon');
+  assert.equal(w2.damage, 1);
+  assert.equal(w2.ammo, WEAPONS.pistol.mag);
+});
+test('weapons: numeric invariants for every entry', () => {
+  for (const [id, w] of Object.entries(WEAPONS)) {
+    assert(Number.isFinite(w.damage) && w.damage > 0, `${id} damage`);
+    assert(Number.isFinite(w.rate) && w.rate > 0, `${id} rate`);
+    assert(Number.isFinite(w.noise) && w.noise >= 0, `${id} noise`);
+    assert(Number.isFinite(w.range) && w.range > 0, `${id} range`);
+    assert(Number.isFinite(w.knock), `${id} knock`);
+    if (w.kind === 'gun') {
+      assert(w.mag > 0 && w.reload > 0 && w.spread >= 0, `${id} gun fields`);
+      assert(Number.isFinite(w.recoil) && w.recoil >= 0, `${id} recoil`);
+      assert(Number.isFinite(w.kick) && w.kick >= 0, `${id} kick`);
+      assert(Number.isFinite(w.bloom) && w.bloom >= 0 && w.bloomMax >= w.bloom, `${id} bloom`);
+      assert(Number.isFinite(w.flash) && w.flash > 0, `${id} flash`);
+      assert(Number.isFinite(w.pen) && w.pen >= 0, `${id} penetration`);
+    } else assert(w.arc > 0, `${id} melee arc`);
+  }
+});
+test('missions: pickups reference real weapons', () => {
+  for (const m of MISSIONS) for (const p of m.pickups) assert(WEAPONS[p.weapon], `${m.id} unknown pickup weapon ${p.weapon}`);
+});
+test('missions: goals are valid and self-consistent', () => {
+  for (const m of MISSIONS) {
+    assert(['eliminate', 'retrieve', 'target', 'boss'].includes(m.goal.type), `${m.id} goal type`);
+    if (m.goal.type === 'retrieve' || m.goal.type === 'target') assert(m.goal.x != null && m.goal.y != null, `${m.id} goal coords`);
+    if (m.goal.type === 'boss') assert(m.boss && m.boss.x != null, `${m.id} boss def`);
+    if (m.boss) assert.equal(m.goal.type, 'boss', `${m.id} has a boss but not a boss goal`);
+  }
+});
+test('missions: doors stay in bounds and never overlap walls', () => {
+  for (const m of MISSIONS) {
+    for (const d of m.doors) {
+      assert(d.x >= 0 && d.y >= 0 && d.x + d.w <= m.w && d.y + d.h <= m.h, `${m.id} door out of bounds`);
+      for (const w of m.walls) {
+        const overlap = d.x < w.x + w.w && d.x + d.w > w.x && d.y < w.y + w.h && d.y + d.h > w.y;
+        assert(!overlap, `${m.id} door ${d.x},${d.y} overlaps wall ${w.x},${w.y}`);
+      }
+    }
+  }
+});
+test('missions: opening any door leaves its cell traversable', () => {
+  for (const m of MISSIONS) {
+    const L = new Level(m);
+    for (const d of L.doors) {
+      L.openDoor(d, false);
+      const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+      assert(!L.blocked(cx, cy, 5), `${m.id} door ${d.x},${d.y} is still blocked after opening`);
+    }
+  }
+});
+test('player: fields read and written by update start finite', () => {
+  const p = new Player(0, 0);
+  for (const k of ['x', 'y', 'r', 'a', 'hp', 'maxHp', 'moveSpeed', 'dashCooldown', 'dashTimer', 'dashCd', 'invuln', 'attackCd', 'reloadT', 'reloadMul', 'spreadMul', 'meleeMul', 'noiseMul', 'damageMul', 'rateMul', 'magBonus', 'pierce', 'comboBonus', 'breachBonus', 'detectionMul', 'thrownBonus', 'hitFlash', 'stepT', 'animT', 'vx', 'vy']) {
+    assert(Number.isFinite(p[k]), `player.${k} is not a finite number`);
+  }
+  assert(p.current && typeof p.current.id === 'string');
+});
+test('enemy: fields read and written by update start finite', () => {
+  for (const t of ['guard', 'brawler', 'shotgunner', 'hunter', 'elite']) {
+    const e = new Enemy(0, 0, t, []);
+    for (const k of ['x', 'y', 'r', 'a', 'hp', 'maxHp', 'speed', 'fov', 'vision', 'hear', 'reaction', 'animT', 'stun', 'seenT', 'alertT', 'searchT', 'strafe', 'attackCd']) {
+      assert(Number.isFinite(e[k]), `${t}.${k} not finite`);
+    }
+  }
+});
+test('boss: phase is monotonic with damage and never skips', () => {
+  const b = new Boss(0, 0); b.stun = 1;
+  const seen = new Set();
+  for (let i = 0; i < 40 && !b.dead; i++) { const before = b.phase; b.damage(1, bossG, 0); seen.add(b.phase); assert(b.phase >= before, 'phase went backwards'); }
+  assert(seen.has(1) && seen.has(2) && seen.has(3), `phase progression incomplete: ${[...seen]}`);
 });
 
 // --------------------------------------------------------------- report
