@@ -139,6 +139,18 @@ try {
   const afterShot = await snap();
   ok('combat: firing consumes ammo and counts shots', afterShot.shots > beforeShot.shots && afterShot.ammo < beforeShot.ammo, JSON.stringify({ shots: afterShot.shots, ammo: afterShot.ammo }));
 
+  // --- grounded gun handling: casings, bloom, penetration ---
+  const gunfeel = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    const rev = g.level.pickups.find(x => x.weapon.id === 'revolver');
+    const pist = g.level.pickups.find(x => x.weapon.id === 'pistol');
+    const out = {};
+    if (pist) { g.player.equip(pist.weapon, g); g.player.bloom = 0; g.fx.casings.length = 0; g.player.shoot(g); out.casings = g.fx.casings.length; out.bloom = g.player.bloom; }
+    if (rev) { g.player.equip(rev.weapon, g); g.player.pierce = 0; g.player.bloom = 0; g.projectiles.length = 0; g.player.shoot(g); out.pierce = g.projectiles[0] ? g.projectiles[0].pierce : null; }
+    return out;
+  });
+  ok('weapons: guns eject casings, build bloom and penetrate', gunfeel.casings > 0 && gunfeel.bloom > 0 && gunfeel.pierce >= 1, JSON.stringify(gunfeel));
+
   // --- killing an enemy gives combo/score ---
   const killed = await evalG(() => {
     const g = window.__VEILDRIVE__;

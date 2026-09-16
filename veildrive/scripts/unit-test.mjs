@@ -259,6 +259,16 @@ test('player: damage respects invulnerability and kills', () => {
   p.invuln = 0; p.damage(5, g, 0);
   assert.equal(p.dead, true); assert.equal(died, true);
 });
+test('player: firing builds bloom/recoil, recoil climbs the aim, and both recover', () => {
+  const p = new Player(0, 0); const g = stubGame(p);
+  p.shoot(g);
+  assert(p.bloom > 0, 'firing should build bloom');
+  assert(Number.isFinite(p.recoil), 'recoil should stay finite');
+  const bloom = p.bloom, shots = p.current.ammo;
+  assert.equal(shots, 8, 'a shot should consume one round');
+  for (let i = 0; i < 60; i++) p.update(0.016, g);
+  assert(p.bloom < bloom, 'bloom should recover when not firing');
+});
 test('player: dash sets cooldown and i-frames', () => {
   const p = new Player(0, 0); const g = stubGame(p);
   p.startDash({ x: 1, y: 0 }, g);
@@ -541,8 +551,14 @@ test('weapons: numeric invariants for every entry', () => {
     assert(Number.isFinite(w.noise) && w.noise >= 0, `${id} noise`);
     assert(Number.isFinite(w.range) && w.range > 0, `${id} range`);
     assert(Number.isFinite(w.knock), `${id} knock`);
-    if (w.kind === 'gun') assert(w.mag > 0 && w.reload > 0 && w.spread >= 0, `${id} gun fields`);
-    else assert(w.arc > 0, `${id} melee arc`);
+    if (w.kind === 'gun') {
+      assert(w.mag > 0 && w.reload > 0 && w.spread >= 0, `${id} gun fields`);
+      assert(Number.isFinite(w.recoil) && w.recoil >= 0, `${id} recoil`);
+      assert(Number.isFinite(w.kick) && w.kick >= 0, `${id} kick`);
+      assert(Number.isFinite(w.bloom) && w.bloom >= 0 && w.bloomMax >= w.bloom, `${id} bloom`);
+      assert(Number.isFinite(w.flash) && w.flash > 0, `${id} flash`);
+      assert(Number.isFinite(w.pen) && w.pen >= 0, `${id} penetration`);
+    } else assert(w.arc > 0, `${id} melee arc`);
   }
 });
 test('missions: pickups reference real weapons', () => {
