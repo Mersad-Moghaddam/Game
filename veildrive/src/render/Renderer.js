@@ -4,6 +4,7 @@ import { VIRTUAL_W, VIRTUAL_H } from '../data/config.js';
 export class Renderer {
   constructor(glCanvas) {
     this.available = false;
+    this.canvas = glCanvas;
     this.w = VIRTUAL_W;
     this.h = VIRTUAL_H;
     try {
