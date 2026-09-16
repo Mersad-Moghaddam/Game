@@ -1,5 +1,6 @@
 import { dist, norm, rand } from '../core/math.js';
 import { makeWeapon } from '../combat/weapons.js';
+import { COLORS } from '../data/config.js';
 export class Boss{
   constructor(x,y){this.x=x;this.y=y;this.r=19;this.a=0;this.hp=18;this.maxHp=18;this.dead=false;this.phase=1;this.cool=1;this.mode='gun';this.telegraph=0;this.chargeT=0;this.stun=0;this.weapon=makeWeapon('revolver');this.name='THE PORTER';this.burst=0;}
   update(dt,g){if(this.dead||g.player.dead)return;const p=g.player,d=dist(this,p);this.cool-=dt;if(this.stun>0){this.stun-=dt;return}this.phase=this.hp>12?1:this.hp>6?2:3;
@@ -14,11 +15,22 @@ export class Boss{
     }
   }
   damage(n,g,angle=0){if(this.dead)return;const vulnerable=this.stun>0||this.phase<3;this.hp-=vulnerable?n:Math.max(.25,n*.35);g.fx.blood(this.x,this.y,6,angle);g.shake(3);if(this.hp<=0){this.dead=true;g.onBossKilled(this)}}
-  draw(ctx){if(this.dead)return;ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a);ctx.fillStyle='rgba(0,0,0,.45)';ctx.beginPath();ctx.ellipse(-3,8,23,14,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=this.phase===3?'#6e2538':'#40374a';ctx.fillRect(-17,-13,31,27);ctx.fillStyle='#d0b187';ctx.fillRect(-14,-15,5,29);ctx.fillStyle='#14151c';ctx.fillRect(-9,8,7,13);ctx.fillRect(5,8,7,13);
-    // bellhop/keyhole mask - original boss identity
-    ctx.fillStyle='#c9bca5';ctx.beginPath();ctx.moveTo(8,-15);ctx.lineTo(21,-8);ctx.lineTo(22,6);ctx.lineTo(12,15);ctx.lineTo(1,8);ctx.lineTo(0,-7);ctx.closePath();ctx.fill();ctx.fillStyle='#1a171d';ctx.beginPath();ctx.arc(12,-2,4,0,Math.PI*2);ctx.fill();ctx.fillRect(10,1,4,8);ctx.fillStyle='#d04462';ctx.fillRect(18,-8,3,7);ctx.fillStyle='#b7a994';ctx.fillRect(17,-2,18,5);ctx.restore();
-    if(this.phase===3&&this.mode==='telegraph'){ctx.strokeStyle='rgba(232,67,89,.85)';ctx.lineWidth=2;ctx.setLineDash([7,6]);ctx.beginPath();ctx.moveTo(this.x,this.y);ctx.lineTo(this.x+Math.cos(this.a)*430,this.y+Math.sin(this.a)*430);ctx.stroke();ctx.setLineDash([])}
-    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(this.x-34,this.y-32,68,6);ctx.fillStyle='#d74861';ctx.fillRect(this.x-33,this.y-31,66*(this.hp/this.maxHp),4);
+  accent(){return this.phase===3?COLORS.blood:this.phase===2?COLORS.orange:COLORS.violet}
+  draw(ctx){if(this.dead)return;const flash=this.stun>0;ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a);
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.beginPath();ctx.ellipse(-3,8,23,14,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=COLORS.ink;ctx.fillRect(-18,-14,33,29);
+    ctx.fillStyle=flash?'#ffffff':(this.phase===3?'#3a1030':'#2a1a44');ctx.fillRect(-16,-12,29,25);
+    ctx.fillStyle=this.accent();ctx.fillRect(-14,-14,5,29);
+    ctx.fillStyle=COLORS.ink;ctx.fillRect(-8,9,7,13);ctx.fillRect(5,9,7,13);
+    // bellhop/keyhole mask
+    ctx.fillStyle=COLORS.bone;ctx.beginPath();ctx.moveTo(8,-15);ctx.lineTo(21,-8);ctx.lineTo(22,6);ctx.lineTo(12,15);ctx.lineTo(1,8);ctx.lineTo(0,-7);ctx.closePath();ctx.fill();
+    ctx.fillStyle=COLORS.ink;ctx.beginPath();ctx.arc(12,-2,4,0,Math.PI*2);ctx.fill();ctx.fillRect(10,1,4,8);
+    ctx.fillStyle=this.accent();ctx.fillRect(18,-8,3,7);
+    ctx.fillStyle='#b7a994';ctx.fillRect(17,-2,18,5);
+    ctx.restore();
+    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(this.x-34,this.y-32,68,6);ctx.fillStyle=COLORS.hotPink;ctx.fillRect(this.x-33,this.y-31,66*(this.hp/this.maxHp),4);
   }
-  drawGlow(ctx){}
+  drawGlow(ctx){if(this.dead)return;ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a);ctx.fillStyle=this.accent();ctx.beginPath();ctx.arc(12,-2,4,0,Math.PI*2);ctx.fill();ctx.restore();
+    if(this.phase===3&&this.mode==='telegraph'){ctx.strokeStyle='rgba(255,46,136,.9)';ctx.lineWidth=3;ctx.setLineDash([9,7]);ctx.beginPath();ctx.moveTo(this.x,this.y);ctx.lineTo(this.x+Math.cos(this.a)*430,this.y+Math.sin(this.a)*430);ctx.stroke();ctx.setLineDash([])}
+  }
 }
