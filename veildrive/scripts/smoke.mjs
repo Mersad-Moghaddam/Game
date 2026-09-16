@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { Level } from '../src/world/Level.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
-import { MASKS, UPGRADES } from '../src/data/config.js';
+import { MASKS, UPGRADES, COLORS } from '../src/data/config.js';
+import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
 
 const level = new Level();
 assert.equal(level.w, 1800);
@@ -23,4 +24,16 @@ for (const [id, data] of Object.entries(WEAPONS)) {
 }
 assert(MASKS.length >= 4);
 assert(UPGRADES.length >= 8);
+assert.deepEqual(Object.keys(MOODS).sort(), ['blood', 'sunset', 'toxic', 'violet']);
+assert.deepEqual([...MOOD_IDS].sort(), ['blood', 'sunset', 'toxic', 'violet']);
+for (const id of Object.keys(MOODS)) {
+  for (const key of ['ground', 'ground2', 'wall', 'wallHi', 'glow', 'accent']) {
+    assert(/^#[0-9a-f]{6}$/i.test(moodColor(id, key, 0.5)), `bad mood color ${id}.${key}`);
+  }
+}
+assert.equal(moodColor('sunset', 'glow', 0), moodColor('sunset', 'glow', 0), 'mood color must be deterministic');
+assert.notEqual(moodColor('sunset', 'glow', 0), moodColor('sunset', 'glow', 1), 'pulse must brighten');
+for (const key of ['void', 'ground', 'ground2', 'wall', 'wallHi', 'hotPink', 'magenta', 'cyan', 'blue', 'violet', 'orange', 'lime', 'bone', 'ink', 'blood', 'bloodDark']) {
+  assert(COLORS[key] && /^#[0-9a-f]{6}$/i.test(COLORS[key]), `missing palette key ${key}`);
+}
 console.log('VEIL//DRIVE smoke checks passed.');
