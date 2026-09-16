@@ -1,5 +1,18 @@
 import { Game } from './core/Game.js';
-const canvas=document.getElementById('game');
-const game=new Game(canvas);
+import { Renderer } from './render/Renderer.js';
+
+const canvas = document.getElementById('game');
+const glCanvas = document.getElementById('gl');
+
+let renderer = new Renderer(glCanvas);
+if (renderer.available) {
+  canvas.style.display = 'none';
+  glCanvas.style.display = 'block';
+} else {
+  glCanvas.style.display = 'none';
+  renderer = null;
+}
+
+const game = new Game(canvas, renderer);
 game.start();
-window.__VEILDRIVE__=game;
+window.__VEILDRIVE__ = game;

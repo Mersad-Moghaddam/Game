@@ -2,6 +2,7 @@
 * { box-sizing: border-box; }
 html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#05060a; }
 body { font-family: "Courier New", ui-monospace, monospace; user-select:none; }
-#stage { position:fixed; inset:0; display:grid; place-items:center; background:radial-gradient(circle at 50% 45%, #13151c 0, #08090d 45%, #020306 100%); }
-#game { position:absolute; image-rendering:pixelated; image-rendering:crisp-edges; outline:none; box-shadow:0 0 80px rgba(0,0,0,.75); }
-#scanlines { pointer-events:none; position:absolute; inset:0; mix-blend-mode:soft-light; opacity:.22; background:repeating-linear-gradient(to bottom, rgba(255,255,255,.05) 0, rgba(255,255,255,.05) 1px, rgba(0,0,0,.06) 2px, rgba(0,0,0,.06) 4px); }
+#stage { position:fixed; inset:0; display:grid; place-items:center; background:radial-gradient(circle at 50% 45%, #1a0a33 0, #0b0416 45%, #050208 100%); }
+#game, #gl, #ui { position:absolute; image-rendering:pixelated; image-rendering:crisp-edges; outline:none; box-shadow:0 0 80px rgba(0,0,0,.75); }
+#ui { pointer-events:none; }
+#scanlines { pointer-events:none; position:absolute; inset:0; mix-blend-mode:soft-light; opacity:.08; background:repeating-linear-gradient(to bottom, rgba(255,255,255,.05) 0, rgba(255,255,255,.05) 1px, rgba(0,0,0,.06) 2px, rgba(0,0,0,.06) 4px); }
