@@ -46,4 +46,5 @@ export class Player{
     if(this.current.kind==='gun'){ctx.fillStyle=this.current.color;ctx.fillRect(18,-3,16,5);ctx.fillStyle='#111';ctx.fillRect(17,1,5,6);}else{ctx.fillStyle=this.current.color;ctx.fillRect(16,-2,25,4);}
     ctx.restore();
   }
+  drawGlow(ctx){}
 }

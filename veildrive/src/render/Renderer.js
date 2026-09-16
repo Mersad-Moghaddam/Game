@@ -27,14 +27,26 @@ export class Renderer {
     );
     this.scene.add(this.albedoMesh);
 
+    this.emissive = makeLayer('#000000');
+    this.emissive.texture.colorSpace = THREE.SRGBColorSpace;
+    const glowMat = new THREE.MeshBasicMaterial({
+      map: this.emissive.texture, transparent: true, blending: THREE.AdditiveBlending,
+      depthTest: false, depthWrite: false
+    });
+    this.emissiveMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), glowMat);
+    this.emissiveMesh.position.z = 0.1;
+    this.scene.add(this.emissiveMesh);
+
     this.available = true;
   }
 
   get albedoCtx() { return this.albedo.ctx; }
+  get emissiveCtx() { return this.emissive.ctx; }
 
   render() {
     if (!this.available) return;
     this.albedo.texture.needsUpdate = true;
+    this.emissive.texture.needsUpdate = true;
     this.renderer.render(this.scene, this.camera);
   }
 

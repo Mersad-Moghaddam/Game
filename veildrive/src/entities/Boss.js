@@ -20,4 +20,5 @@ export class Boss{
     if(this.phase===3&&this.mode==='telegraph'){ctx.strokeStyle='rgba(232,67,89,.85)';ctx.lineWidth=2;ctx.setLineDash([7,6]);ctx.beginPath();ctx.moveTo(this.x,this.y);ctx.lineTo(this.x+Math.cos(this.a)*430,this.y+Math.sin(this.a)*430);ctx.stroke();ctx.setLineDash([])}
     ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(this.x-34,this.y-32,68,6);ctx.fillStyle='#d74861';ctx.fillRect(this.x-33,this.y-31,66*(this.hp/this.maxHp),4);
   }
+  drawGlow(ctx){}
 }
