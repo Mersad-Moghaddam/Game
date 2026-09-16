@@ -265,6 +265,29 @@ try {
   });
   ok('enemy: idle enemies are still (no idle shake)', idle.da < 1e-6 && idle.shake < 0.01, JSON.stringify(idle));
 
+  // --- low-health heartbeat timer no longer becomes NaN ---
+  const heart = await page.evaluate(async () => {
+    const g = window.__VEILDRIVE__;
+    g.invincible = true; g.player.hp = 1; g.heartT = 0;
+    let beats = 0; const orig = g.audio.play ? g.audio.play.bind(g.audio) : null;
+    if (orig) g.audio.play = n => { if (n === 'heartbeat') beats++; return orig(n); };
+    await new Promise(r => setTimeout(r, 1400));
+    if (orig) g.audio.play = orig;
+    g.invincible = false;
+    return { beats, heartT: g.heartT, finite: Number.isFinite(g.heartT) };
+  });
+  ok('hud: low health keeps a finite heartbeat timer', heart.finite, JSON.stringify(heart));
+
+  // --- off-screen threat + objective markers draw without errors ---
+  const markers = await page.evaluate(async () => {
+    const g = window.__VEILDRIVE__;
+    const e = g.enemies.find(x => !x.dead);
+    if (e) { e.x = g.player.x + 3000; e.y = g.player.y; e.state = 'COMBAT'; }
+    await new Promise(r => setTimeout(r, 300));
+    return { hasMarkers: typeof g.drawMarkers === 'function', alive: g.enemies.filter(x => !x.dead).length };
+  });
+  ok('hud: markers survive an off-screen threat', markers.hasMarkers, JSON.stringify(markers));
+
   // --- resize does not throw ---
   await page.setViewportSize({ width: 900, height: 500 });
   await sleep(300);

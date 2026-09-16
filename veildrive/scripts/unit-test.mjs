@@ -525,6 +525,80 @@ test('player: reload takes at most the ammo left in reserve', () => {
   assert.equal(p.current.ammo, 1); assert.equal(p.current.reserve, 0);
 });
 
+// --------------------------------------------------- strict invariants
+test('weapons: makeWeapon deep-copies the definition table', () => {
+  const w = makeWeapon('pistol');
+  w.damage = 999; w.ammo = 0; w.reserve = 0;
+  const w2 = makeWeapon('pistol');
+  assert.equal(WEAPONS.pistol.damage, 1, 'the data table was mutated by a runtime weapon');
+  assert.equal(w2.damage, 1);
+  assert.equal(w2.ammo, WEAPONS.pistol.mag);
+});
+test('weapons: numeric invariants for every entry', () => {
+  for (const [id, w] of Object.entries(WEAPONS)) {
+    assert(Number.isFinite(w.damage) && w.damage > 0, `${id} damage`);
+    assert(Number.isFinite(w.rate) && w.rate > 0, `${id} rate`);
+    assert(Number.isFinite(w.noise) && w.noise >= 0, `${id} noise`);
+    assert(Number.isFinite(w.range) && w.range > 0, `${id} range`);
+    assert(Number.isFinite(w.knock), `${id} knock`);
+    if (w.kind === 'gun') assert(w.mag > 0 && w.reload > 0 && w.spread >= 0, `${id} gun fields`);
+    else assert(w.arc > 0, `${id} melee arc`);
+  }
+});
+test('missions: pickups reference real weapons', () => {
+  for (const m of MISSIONS) for (const p of m.pickups) assert(WEAPONS[p.weapon], `${m.id} unknown pickup weapon ${p.weapon}`);
+});
+test('missions: goals are valid and self-consistent', () => {
+  for (const m of MISSIONS) {
+    assert(['eliminate', 'retrieve', 'target', 'boss'].includes(m.goal.type), `${m.id} goal type`);
+    if (m.goal.type === 'retrieve' || m.goal.type === 'target') assert(m.goal.x != null && m.goal.y != null, `${m.id} goal coords`);
+    if (m.goal.type === 'boss') assert(m.boss && m.boss.x != null, `${m.id} boss def`);
+    if (m.boss) assert.equal(m.goal.type, 'boss', `${m.id} has a boss but not a boss goal`);
+  }
+});
+test('missions: doors stay in bounds and never overlap walls', () => {
+  for (const m of MISSIONS) {
+    for (const d of m.doors) {
+      assert(d.x >= 0 && d.y >= 0 && d.x + d.w <= m.w && d.y + d.h <= m.h, `${m.id} door out of bounds`);
+      for (const w of m.walls) {
+        const overlap = d.x < w.x + w.w && d.x + d.w > w.x && d.y < w.y + w.h && d.y + d.h > w.y;
+        assert(!overlap, `${m.id} door ${d.x},${d.y} overlaps wall ${w.x},${w.y}`);
+      }
+    }
+  }
+});
+test('missions: opening any door leaves its cell traversable', () => {
+  for (const m of MISSIONS) {
+    const L = new Level(m);
+    for (const d of L.doors) {
+      L.openDoor(d, false);
+      const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+      assert(!L.blocked(cx, cy, 5), `${m.id} door ${d.x},${d.y} is still blocked after opening`);
+    }
+  }
+});
+test('player: fields read and written by update start finite', () => {
+  const p = new Player(0, 0);
+  for (const k of ['x', 'y', 'r', 'a', 'hp', 'maxHp', 'moveSpeed', 'dashCooldown', 'dashTimer', 'dashCd', 'invuln', 'attackCd', 'reloadT', 'reloadMul', 'spreadMul', 'meleeMul', 'noiseMul', 'damageMul', 'rateMul', 'magBonus', 'pierce', 'comboBonus', 'breachBonus', 'detectionMul', 'thrownBonus', 'hitFlash', 'stepT', 'animT', 'vx', 'vy']) {
+    assert(Number.isFinite(p[k]), `player.${k} is not a finite number`);
+  }
+  assert(p.current && typeof p.current.id === 'string');
+});
+test('enemy: fields read and written by update start finite', () => {
+  for (const t of ['guard', 'brawler', 'shotgunner', 'hunter', 'elite']) {
+    const e = new Enemy(0, 0, t, []);
+    for (const k of ['x', 'y', 'r', 'a', 'hp', 'maxHp', 'speed', 'fov', 'vision', 'hear', 'reaction', 'animT', 'stun', 'seenT', 'alertT', 'searchT', 'strafe', 'attackCd']) {
+      assert(Number.isFinite(e[k]), `${t}.${k} not finite`);
+    }
+  }
+});
+test('boss: phase is monotonic with damage and never skips', () => {
+  const b = new Boss(0, 0); b.stun = 1;
+  const seen = new Set();
+  for (let i = 0; i < 40 && !b.dead; i++) { const before = b.phase; b.damage(1, bossG, 0); seen.add(b.phase); assert(b.phase >= before, 'phase went backwards'); }
+  assert(seen.has(1) && seen.has(2) && seen.has(3), `phase progression incomplete: ${[...seen]}`);
+});
+
 // --------------------------------------------------------------- report
 if (failures.length) {
   console.log(`unit: ${passed} passed, ${failures.length} FAILED`);

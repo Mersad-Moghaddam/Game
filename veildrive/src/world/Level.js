@@ -29,8 +29,18 @@ export class Level{
     this.zones = [{ x: 0, y: 0, w: this.w, h: this.h, type: 'interior', mood: this.mood }];
     if(this.goal.type === 'retrieve') this.objective = { x: this.goal.x, y: this.goal.y, taken: false, label: this.goal.label || 'OBJECTIVE' };
   }
-  markDirty(){ this.dirty = true; }
+  markDirty(){ this.dirty = true; this._blockersDirty = true; }
   zoneAt(){ return this.mood; }
+  // Cached collision blocker list. Movement and line-of-sight query this many
+  // times per frame, so rebuilding it each call caused needless allocation and
+  // GC hitching. It is rebuilt only when geometry changes (markDirty).
+  blockers(){
+    if(this._blockersDirty || !this._blockers){
+      this._blockers = [...this.walls, ...this.props.filter(p=>p.solid&&!p.broken), ...this.doors.filter(d=>!d.open&&!d.broken)];
+      this._blockersDirty = false;
+    }
+    return this._blockers;
+  }
   // Direction from the spawn toward the entry-room door, used so the player
   // always starts (and respawns) facing the way out.
   entryFacing(){ let best=null,bd=Infinity; for(const d of this.doors){const dd=Math.hypot(d.x+d.w/2-this.def.spawn.x,d.y+d.h/2-this.def.spawn.y);if(dd<bd){bd=dd;best=d}} return best?Math.atan2(best.y+best.h/2-this.def.spawn.y,best.x+best.w/2-this.def.spawn.x):0 }
@@ -45,7 +55,6 @@ export class Level{
     }
     return { x, y };
   }
-  blockers(){return [...this.walls,...this.props.filter(p=>p.solid&&!p.broken),...this.doors.filter(d=>!d.open&&!d.broken)];}
   blocked(x,y,r=12){if(x-r<0||y-r<0||x+r>this.w||y+r>this.h)return true;return this.blockers().some(o=>circleRect(x,y,r,o));}
   moveCircle(e,dx,dy,r=e.r||12){let nx=e.x+dx;if(!this.blocked(nx,e.y,r))e.x=nx;let ny=e.y+dy;if(!this.blocked(e.x,ny,r))e.y=ny;}
   lineBlocked(a,b){return this.blockers().some(o=>segRect(a.x,a.y,b.x,b.y,o));}
