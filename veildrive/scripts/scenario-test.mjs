@@ -101,6 +101,30 @@ try {
   ok('determinism: same seed reproduces the run', JSON.stringify(det.a) === JSON.stringify(det.b), `score ${det.a.score} vs ${det.b.score}`);
   await evalG(() => { const g = window.__VEILDRIVE__; g.runSeed = null; g.state = 'menu'; });
 
+  // --- characters stay upright when facing either way (no 180-degree flip) ---
+  const upright = await page.evaluate(() => {
+    const g = window.__VEILDRIVE__;
+    if (!(g.renderer && g.renderer.available)) return { skipped: true };
+    const c = g.renderer.albedoCtx;
+    const measure = facing => {
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.fillStyle = '#000000'; c.fillRect(0, 0, 960, 540);
+      g.player.x = 480; g.player.y = 270; g.player.a = facing; g.player.dead = false;
+      g.player.draw(c);
+      const d = c.getImageData(430, 200, 100, 110).data;
+      let minY = 999, maxY = -1;
+      for (let y = 0; y < 110; y++) for (let x = 0; x < 100; x++) { const i = (y * 100 + x) * 4; if (d[i] + d[i + 1] + d[i + 2] > 60) { if (y < minY) minY = y; if (y > maxY) maxY = y; } }
+      const h = maxY - minY + 1; let top = 0, tc = 0, bot = 0, bc = 0;
+      for (let y = 0; y < 110; y++) for (let x = 0; x < 100; x++) {
+        const i = (y * 100 + x) * 4, b = d[i] + d[i + 1] + d[i + 2]; if (b <= 60) continue;
+        if (y < minY + h * 0.33) { top += b; tc++; } else if (y > minY + h * 0.67) { bot += b; bc++; }
+      }
+      return { top: tc ? top / tc : 0, bot: bc ? bot / bc : 0 };
+    };
+    return { right: measure(0), left: measure(Math.PI) };
+  });
+  ok('characters: figures stay upright facing either way', upright.skipped || (upright.right.top > upright.right.bot && upright.left.top > upright.left.bot), JSON.stringify(upright));
+
   // --- menu: masks, settings, credits ---
   await evalG(() => { const g = window.__VEILDRIVE__; g.save.unlockedMasks = ['MOTH-0', 'RAM-7']; g.save.selectedMask = 'MOTH-0'; });
   await evalG(() => { window.__VEILDRIVE__.menuIndex = 1; });

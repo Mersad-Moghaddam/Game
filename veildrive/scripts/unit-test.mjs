@@ -439,7 +439,7 @@ test('fx: rings are capped and expire', () => {
 
 // ------------------------------------------------- weapon art & chars
 import { drawWeaponArt } from '../src/render/weapons-art.js';
-import { drawHuman } from '../src/render/humanoid.js';
+import { CHARACTERS, facingView, poseJoints, drawCharacter } from '../src/render/character.js';
 function recordingCtx() {
   const calls = [];
   const noop = name => (...a) => { calls.push(name); };
@@ -460,13 +460,49 @@ test('art: unknown weapon falls back without throwing', () => {
   drawWeaponArt(ctx, { id: 'mystery', color: '#fff' }, 1);
   assert(ctx.calls.length > 0);
 });
-test('art: humanoid draws with archetype options and returns anchors', () => {
-  for (const opts of [{}, { hat: 'cap' }, { hat: 'hood' }, { hat: 'visor' }, { coat: true, bulk: 2 }, { slim: true, pose: 'melee' }]) {
-    const ctx = recordingCtx();
-    const r = drawHuman(ctx, { phase: 1.2, ...opts });
-    assert(r && r.hand && r.head, 'should return hand and head anchors');
-    assert(Number.isFinite(r.hand.x) && Number.isFinite(r.head.y));
+test('character: facingView mirrors without inverting', () => {
+  for (let a = -Math.PI; a < Math.PI; a += 0.15) {
+    const v = facingView(a);
+    assert(['side', 'front', 'back'].includes(v.view));
+    assert(v.dir === 1 || v.dir === -1);
+    assert(Math.abs(v.localAim) <= Math.PI / 2 + 1e-6, `localAim ${v.localAim} at ${a}`);
   }
+  assert.equal(facingView(0).flip, false); assert.equal(facingView(Math.PI).flip, true);
+});
+test('character: every archetype has build, palette and gear', () => {
+  for (const id of ['moth0', 'guard', 'brawler', 'shotgunner', 'hunter', 'elite', 'porter']) {
+    const c = CHARACTERS[id]; assert(c, id);
+    for (const k of ['shirt', 'pants', 'skin', 'accent']) assert(typeof c.palette[k] === 'string', `${id}.${k}`);
+    assert(c.build.bulk >= 0 && c.build.height > 0);
+  }
+});
+test('character: poses are distinct and finite', () => {
+  const P = ['idle', 'walk', 'run', 'aim', 'melee', 'reload', 'hurt', 'stunned', 'dead'];
+  const sig = p => JSON.stringify(poseJoints(p, 0.3, 'side', CHARACTERS.guard.build));
+  assert.equal(new Set(P.map(sig)).size, P.length);
+  for (const p of P) for (const t of [0, 1, 2, 3]) assert(Number.isFinite(poseJoints(p, t, 'side', CHARACTERS.guard.build).chest));
+});
+test('character: draws and returns finite world sockets for every facing and archetype', () => {
+  for (const id of ['moth0', 'guard', 'brawler', 'shotgunner', 'hunter', 'elite', 'porter']) {
+    for (let a = -Math.PI; a < Math.PI; a += 0.5) {
+      const ctx = recordingCtx();
+      const r = drawCharacter(ctx, { x: 10, y: 20, archetype: id, pose: 'aim', phase: 1, facing: a, weapon: makeWeapon('pistol') });
+      for (const k of ['hand', 'offhand', 'head', 'muzzle']) assert(Number.isFinite(r[k].x) && Number.isFinite(r[k].y), `${id} ${k} @ ${a}`);
+      assert(ctx.calls.length > 0, id);
+    }
+  }
+});
+test('character: the coat and mask options change the drawing work', () => {
+  const plain = recordingCtx(); drawCharacter(plain, { archetype: 'guard', facing: 0 });
+  const coat = recordingCtx(); drawCharacter(coat, { archetype: 'elite', facing: 0 });
+  const dead = recordingCtx(); drawCharacter(dead, { archetype: 'guard', facing: 0, pose: 'dead', deathT: 1 });
+  assert(coat.calls.length > plain.calls.length, 'a geared archetype should add drawing work');
+  assert(dead.calls.length > 0);
+});
+test('character: lower HP draws more damage wear', () => {
+  const full = recordingCtx(); drawCharacter(full, { archetype: 'guard', facing: 0, hpFrac: 1 });
+  const hurt = recordingCtx(); drawCharacter(hurt, { archetype: 'guard', facing: 0, hpFrac: 0.1 });
+  assert(hurt.calls.length > full.calls.length, 'blood wear should add drawing work');
 });
 
 test('art: weapon silhouettes are distinct per type', () => {
@@ -475,11 +511,6 @@ test('art: weapon silhouettes are distinct per type', () => {
     const ctx = recordingCtx(); drawWeaponArt(ctx, makeWeapon(id), 1); counts.add(ctx.calls.length);
   }
   assert(counts.size >= 5, `weapons should not share silhouettes (distinct call counts: ${counts.size})`);
-});
-test('art: the humanoid coat option changes the silhouette', () => {
-  const plain = recordingCtx(); drawHuman(plain, {});
-  const coat = recordingCtx(); drawHuman(coat, { coat: true });
-  assert(coat.calls.length > plain.calls.length, 'coat should add drawing work');
 });
 test('missions: entry metadata is well formed', () => {
   for (const m of MISSIONS) {

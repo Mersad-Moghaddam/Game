@@ -2,8 +2,7 @@ import { norm, clamp } from '../core/math.js';
 import { rng } from '../core/rng.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { COLORS } from '../data/config.js';
-import { drawHuman } from '../render/humanoid.js';
-import { drawWeaponArt } from '../render/weapons-art.js';
+import { drawCharacter } from '../render/character.js';
 const MASK_ACCENT = { 'MOTH-0': COLORS.cyan, 'RAM-7': COLORS.orange, 'FOX-2': COLORS.cyan, 'RAVEN-3': COLORS.violet };
 export class Player{
   constructor(x,y){this.x=x;this.y=y;this.r=13;this.a=0;this.hp=5;this.maxHp=5;this.moveSpeed=270;this.dashCooldown=.6;this.dashTimer=0;this.dashCd=0;this.dashV={x:0,y:0};this.invuln=0;this.attackCd=0;this.reloadT=0;this.reloadWeapon=null;this.reloadMul=1;this.spreadMul=1;this.meleeMul=1;this.noiseMul=1;this.damageMul=1;this.rateMul=1;this.magBonus=0;this.pierce=0;this.comboBonus=0;this.execRestoresDash=false;this.ricochet=false;this.maskId='MOTH-0';this.breachBonus=0;this.detectionMul=1;this.thrownBonus=0;this.current=makeWeapon('pistol');this.previous=null;this.dead=false;this.hitFlash=0;this.stepT=0;this.animT=0;this.vx=0;this.vy=0;this.recoil=0;this.bloom=0;this.meleeSwings=0;}
@@ -51,46 +50,21 @@ export class Player{
   swap(g){if(!this.previous)return;[this.current,this.previous]=[this.previous,this.current];this.reloadT=0;this.reloadWeapon=null;g.audio.play('ui');}
   damage(n,g,sourceA=0){if(this.invuln>0||this.dead)return;this.hp-=n;this.invuln=.22;this.hitFlash=.15;g.fx.blood(this.x,this.y,10,sourceA+Math.PI);g.shake(9);g.hurtFlash=1;g.audio.play('hurt');g.renderer?.glitch?.(.6);if(this.hp<=0){this.dead=true;g.onPlayerDeath();}}
   maskAccent(){return MASK_ACCENT[this.maskId]||COLORS.cyan}
+  maskStyle(){return this.maskId==='RAM-7'?'ram':this.maskId==='FOX-2'?'fox':this.maskId==='RAVEN-3'?'raven':'moth'}
   draw(ctx){
-    const t=this.animT||0;
     const flash=this.hitFlash>0;
-    const pose=this.current.kind==='gun'?'gun':(this.attackCd>0?'melee':'idle');
-    ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a+(this.dead?1.15:0));
-    const res=drawHuman(ctx,{phase:t,slim:true,shirt:flash?'#ffffff':'#0e7a78',shirtDark:flash?'#ffffff':'#0a5c5a',pants:'#161a24',pantsDark:'#10131a',accent:flash?'#ffffff':COLORS.hotPink,skin:'#e0a97f',skinDark:'#bd8259',hair:'#1a1524',pose,recoil:Math.max(0,this.attackCd)});
-    const h=res.hand;
-    const reloading=this.reloadT>0;
-    const rp=reloading?clamp(1-this.reloadT/((this.reloadWeapon?this.reloadWeapon.reload:1)*this.reloadMul),0,1):0;
-    ctx.save();ctx.translate(h.x,h.y);if(reloading)ctx.translate(0,Math.sin(rp*Math.PI)*5);drawWeaponArt(ctx,this.current,1,'#e0a97f');ctx.restore();
-    if(reloading){ctx.save();ctx.translate(h.x-2,h.y+3+Math.sin(rp*Math.PI)*8);ctx.fillStyle='#20202a';ctx.fillRect(-3,-4,6,9);ctx.fillStyle='#c9b06a';ctx.fillRect(-2,3,4,2);ctx.restore();}
-    this.drawMask(ctx,res.head,flash);
-    ctx.restore();
-  }
-  drawMask(ctx,head,flash){
-    const acc=this.maskAccent();
-    ctx.save();ctx.translate(head.x,head.y);
-    ctx.fillStyle=flash?'#ffffff':COLORS.bone;
-    if(this.maskId==='RAM-7'){
-      ctx.beginPath();ctx.moveTo(-7,-7);ctx.lineTo(6,-8);ctx.lineTo(12,-2);ctx.lineTo(9,8);ctx.lineTo(-2,8);ctx.lineTo(-9,1);ctx.closePath();ctx.fill();
-      ctx.strokeStyle=acc;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(1,-1,8,-0.6,0.9);ctx.stroke();
-      ctx.fillStyle=COLORS.ink;ctx.fillRect(2,-2,6,3);
-    }else if(this.maskId==='FOX-2'){
-      ctx.beginPath();ctx.moveTo(-7,-6);ctx.lineTo(8,-7);ctx.lineTo(13,0);ctx.lineTo(4,8);ctx.lineTo(-8,3);ctx.closePath();ctx.fill();
-      ctx.fillStyle=acc;ctx.fillRect(6,-5,3,10);ctx.fillStyle=COLORS.ink;ctx.fillRect(0,-1,7,2);
-    }else if(this.maskId==='RAVEN-3'){
-      ctx.beginPath();ctx.moveTo(-7,-5);ctx.lineTo(9,-3);ctx.lineTo(18,0);ctx.lineTo(9,3);ctx.lineTo(-7,6);ctx.closePath();ctx.fill();
-      ctx.fillStyle=acc;ctx.fillRect(6,-2,10,3);ctx.fillStyle=COLORS.ink;ctx.fillRect(0,-2,6,3);
-    }else{
-      ctx.beginPath();ctx.moveTo(-6,-6);ctx.lineTo(8,-7);ctx.lineTo(12,0);ctx.lineTo(8,7);ctx.lineTo(-6,6);ctx.lineTo(-9,0);ctx.closePath();ctx.fill();
-      ctx.fillStyle=acc;ctx.fillRect(2,-4,6,2);ctx.fillRect(2,2,6,2);ctx.fillStyle=COLORS.ink;ctx.fillRect(-1,-2,4,4);
-    }
-    ctx.restore();
+    const gun=this.current.kind==='gun';
+    const speed=Math.hypot(this.vx||0,this.vy||0);
+    const pose=this.dead?'dead':(this.reloadT>0?'reload':(this.attackCd>0&&!gun?'melee':(speed>24?'walk':(gun?'aim':'idle'))));
+    const hpFrac=this.maxHp?clamp(this.hp/this.maxHp,0,1):1;
+    drawCharacter(ctx,{x:this.x,y:this.y,facing:this.a,archetype:'moth0',gear:{mask:this.maskStyle()},pose,phase:this.animT||0,weapon:this.current,hitFlash:flash,recoil:Math.max(0,this.attackCd),hpFrac,limp:hpFrac<=.4,deathT:1,seed:0x1101});
   }
   drawGlow(ctx){
     if(this.dead||this.invuln>.3)return;
-    const acc=this.maskAccent();
-    ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a);
-    ctx.fillStyle=acc;ctx.fillRect(6,-5,7,3);ctx.fillRect(6,2,7,3);
-    ctx.fillStyle=COLORS.hotPink;ctx.fillRect(-9,-6,3,12);
+    const acc=this.maskAccent(),c=Math.cos(this.a),s=Math.sin(this.a);
+    ctx.save();
+    ctx.fillStyle=acc;ctx.fillRect(this.x+c*9-3,this.y+s*9-3,6,6);
+    ctx.fillStyle=COLORS.hotPink;ctx.fillRect(this.x-c*5-2,this.y-s*5-2,4,4);
     ctx.restore();
   }
 }

@@ -1,7 +1,7 @@
 import { dist, norm, angleDiff, rand } from '../core/math.js';
 import { rng } from '../core/rng.js';
 import { makeWeapon } from '../combat/weapons.js';
-import { drawHuman, shade } from '../render/humanoid.js';
+import { drawCharacter } from '../render/character.js';
 const TYPES={
  guard:{hp:1,speed:120,weapon:'pistol',fov:1.65,vision:390,hear:1,reaction:.32,color:'#c33b5a',accent:'#ff2e88'},
  brawler:{hp:1,speed:155,weapon:'baton',fov:1.9,vision:330,hear:1.05,reaction:.24,color:'#e07a2b',accent:'#ffb347'},
@@ -32,7 +32,7 @@ export class Enemy{
  }
  // Walk cycle is driven by actual displacement, so idle enemies do not
  // fidget or walk in place.
- stepAnim(sx,sy){this.animT=(this.animT||0)+Math.hypot(this.x-sx,this.y-sy)*0.16}
+  stepAnim(sx,sy){const moved=Math.hypot(this.x-sx,this.y-sy);this.animT=(this.animT||0)+moved*0.16;this._moving=moved>0.05;}
  moveToward(t,dt,g,m=1){
    let n=norm(t.x-this.x,t.y-this.y);const probe=26;
    if(this.avoidT>0)this.avoidT-=dt;
@@ -63,16 +63,11 @@ export class Enemy{
  updateBurst(dt,g,p){if(this.burst<=0)return;this.burstT-=dt;if(this.burstT>0)return;this.burst--;this.burstT=.13;if(this.state==='COMBAT'&&p&&!p.dead&&!g.level.lineBlocked(this,p)){const to=Math.atan2(p.y-this.y,p.x-this.x);g.enemyShoot(this,this.weapon,to+rand(-.07,.07));}}
  damage(n,g,angle=0,knock=110){if(this.dead)return;this.hp-=n;this.state='COMBAT';this.stun=.08;this.knockX=Math.cos(angle)*knock;this.knockY=Math.sin(angle)*knock;if(this.hp<=0){this.dead=true;g.onEnemyKilled(this,angle,n)}else{g.fx.blood(this.x,this.y,7,angle);g.shake(2)}}
  stunHit(g,angle,power=180){if(this.dead)return;this.stun=.72;this.state='COMBAT';this.knockX=Math.cos(angle)*power;this.knockY=Math.sin(angle)*power;g.fx.burst(this.x,this.y,7,'#d6d0b7',100,.35,3)}
- draw(ctx,debug=false){if(this.dead)return;
-   const pose=this.weapon.kind==='gun'?'gun':'melee';
-   const hat=this.type==='guard'?'cap':this.type==='hunter'?'hood':this.type==='elite'?'visor':null;
-   const bulk=this.type==='brawler'?2:0;
-   ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a);
-   const res=drawHuman(ctx,{phase:this.animT||0,shirt:this.color,shirtDark:shade(this.color),pants:'#161a24',pantsDark:'#10131a',accent:this.accent,skin:'#e0a97f',skinDark:'#bd8259',hair:'#1a1018',hat,pose,bulk,slim:this.type==='hunter',coat:this.type==='elite',recoil:Math.max(0,this.attackCd)});
-   const h=res.hand;
-   if(this.weapon.kind==='gun'){ctx.fillStyle=this.weapon.color;ctx.fillRect(h.x-1,h.y-2,16,4);}
-   else{ctx.fillStyle=this.weapon.color;ctx.fillRect(h.x-3,h.y-2,24,4);}
-   ctx.restore();
-   if(debug){ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.fillText(this.state,this.x-20,this.y-18)}}
- drawGlow(ctx){if(this.dead)return;const hot=this.state==='COMBAT';ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.a);ctx.fillStyle=hot?'#ff2e88':this.accent;ctx.fillRect(6,-5,7,3);ctx.fillRect(6,2,7,3);ctx.restore()}
+  draw(ctx,debug=false){if(this.dead)return;
+    const arch={guard:'guard',brawler:'brawler',shotgunner:'shotgunner',hunter:'hunter',elite:'elite'}[this.type]||'guard';
+    const pose=this.stun>0.35?'stunned':(this.attackCd>0&&this.weapon.kind==='melee'?'melee':(this.state==='COMBAT'?'aim':(this._moving?'walk':'idle')));
+    const hpFrac=this.maxHp?this.hp/this.maxHp:1;
+    drawCharacter(ctx,{x:this.x,y:this.y,facing:this.a,archetype:arch,pose,phase:this.animT||0,weapon:this.weapon,hitFlash:this.stun>0,recoil:Math.max(0,this.attackCd),hpFrac,limp:hpFrac<=.4,seed:this.x|0});
+    if(debug){ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.fillText(this.state,this.x-20,this.y-18)}}
+  drawGlow(ctx){if(this.dead)return;const hot=this.state==='COMBAT';const c=Math.cos(this.a),s=Math.sin(this.a);ctx.save();const col=hot?'#ff2e88':this.accent;ctx.fillStyle=col;ctx.fillRect(this.x+c*10-3,this.y+s*10-3,6,6);ctx.restore()}
 }
