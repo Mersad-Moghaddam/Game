@@ -81,7 +81,8 @@ export class Renderer {
     const n = Math.min(lights.length, MAX_LIGHTS);
     for (let i = 0; i < n; i++) {
       u.uLightPos.value[i].set(lights[i].sx, lights[i].sy);
-      u.uLightColor.value[i].set(lights[i].color);
+      const c = lights[i].color;
+      u.uLightColor.value[i].setRGB(c[0], c[1], c[2]);
       u.uLightData.value[i * 2] = lights[i].radius;
       u.uLightData.value[i * 2 + 1] = lights[i].intensity;
     }

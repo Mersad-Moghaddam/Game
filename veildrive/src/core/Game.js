@@ -12,8 +12,7 @@ import { drawWeaponArt } from '../render/weapons-art.js';
 import { MISSIONS, MISSION_COUNT } from '../data/missions.js';
 import { clamp,dist,angleDiff,pointSegDist,rand,advance } from './math.js';
 import { rng } from './rng.js';
-import * as THREE from 'three';
-import { moodColor } from '../render/mood.js';
+import { LightBuffer } from '../render/LightBuffer.js';
 export const STEP = 1 / 60;
 export const MAX_STEPS = 5;
 export class Game{
@@ -128,7 +127,7 @@ export class Game{
   rebakeWorld(){this.level.bake(this.worldCtx);for(const d of this.fx.decals)this.level.paintDecal(this.worldCtx,d);for(const c of this.fx.corpses)this.level.paintCorpse(this.worldCtx,c);this.fx.markAllPainted();}
   drainDecalsAndCorpses(){for(const d of this.fx.decals){if(d.painted)continue;this.level.paintDecal(this.worldCtx,d);d.painted=true;}for(const c of this.fx.corpses){if(c.painted)continue;this.level.paintCorpse(this.worldCtx,c);c.painted=true;}}
   beatPulse(){return this.settings.music>0?(this.audio.pulse||0)*Math.min(1,(this.audio.intensity||0)+.35):0}
-  pushLights(){if(!this.renderer||!this.renderer.available||!this.level)return;const pulse=this.beatPulse(),lights=[];for(const l of this.level.lights){const mood=l.mood||this.level.zoneAt(l.x,l.y);lights.push({sx:l.x-this.cam.x+this.shakeX,sy:l.y-this.cam.y+this.shakeY,radius:l.r,intensity:.62,color:new THREE.Color(moodColor(mood,'glow',pulse))})}for(const f of this.fx.flashes){lights.push({sx:f.x-this.cam.x+this.shakeX,sy:f.y-this.cam.y+this.shakeY,radius:f.r*2.2,intensity:1.2,color:new THREE.Color(f.color)})}this.renderer.setLights({lights,ambient:.5,pulse,flashPos:null,flashArc:.6})}
+  pushLights(){if(!this.renderer||!this.renderer.available||!this.level)return;const pulse=this.beatPulse(),k=1+.45*clamp(pulse,0,1);const buf=this._lights||(this._lights=new LightBuffer());buf.begin();for(const l of this.level.lights){const mood=l.mood||this.level.mood;buf.pushMood(l.x-this.cam.x+this.shakeX,l.y-this.cam.y+this.shakeY,l.r,.62,mood,k)}for(const f of this.fx.flashes){buf.pushHex(f.x-this.cam.x+this.shakeX,f.y-this.cam.y+this.shakeY,f.r*2.2,1.2,f.color)}this.renderer.setLights({lights:buf.list,ambient:.5,pulse,flashPos:null,flashArc:.6})}
   renderGL(){const ui=this.uiCtx||this.ctx;if(ui){ui.setTransform(1,0,0,1,0,0);ui.clearRect(0,0,VIRTUAL_W,VIRTUAL_H);}const c=this.renderer.albedoCtx,g=this.renderer.emissiveCtx,S=this.settings.pixel!==false?1/PIXEL:1;c.setTransform(S,0,0,S,0,0);c.imageSmoothingEnabled=false;c.fillStyle=COLORS.void;c.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);    g.setTransform(S,0,0,S,0,0);g.imageSmoothingEnabled=false;g.fillStyle='#000000';g.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
     if(this.state==='menu'||this.state==='settings'||this.state==='credits'||this.state==='results')this.renderer.setLights({lights:[],ambient:1,pulse:this.beatPulse()});
     if(this.state==='menu'){this.drawMenuWorld(c);this.renderer.render();this.drawMenuUI();return}if(this.state==='settings'){this.drawMenuWorld(c);this.renderer.render();this.drawSettings(ui);return}if(this.state==='credits'){this.drawMenuWorld(c);this.renderer.render();this.drawCredits(ui);return}if(this.state==='results'){this.drawResultsWorld(c);this.renderer.render();this.drawResults(ui);return}if(!this.level){this.renderer.render();return}

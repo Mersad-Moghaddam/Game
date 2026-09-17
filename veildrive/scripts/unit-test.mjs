@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { clamp, lerp, dist, norm, angleDiff, pointSegDist, circleRect, segRect, segRectEntry, advance } from '../src/core/math.js';
 import { Rng, mulberry32 } from '../src/core/rng.js';
+import { SpatialHash } from '../src/core/SpatialHash.js';
+import { LightBuffer } from '../src/render/LightBuffer.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
@@ -230,6 +232,38 @@ test('level: doors block when closed and clear when open', () => {
     assert(L.blocked(cx, cy, 5), 'closed door blocks');
     L.openDoor(d, false);
     assert(!L.blocked(cx, cy, 5), 'open door clears');
+  }
+});
+test('spatial: query never misses an overlapping object', () => {
+  const r = new Rng(9), items = [];
+  for (let i = 0; i < 240; i++) items.push({ x: r.range(0, 500), y: r.range(0, 300), w: r.range(4, 30), h: r.range(4, 30) });
+  const h = new SpatialHash(64).rebuild(items);
+  for (let k = 0; k < 240; k++) {
+    const x = r.range(0, 500), y = r.range(0, 300), rad = r.range(1, 40);
+    const got = new Set(h.query(x, y, rad));
+    for (const o of items) if (circleRect(x, y, rad, o)) assert(got.has(o), 'hash missed an overlapping object');
+  }
+});
+test('lights: buffer reuses its array and objects across frames', () => {
+  const b = new LightBuffer();
+  b.begin(); b.pushMood(10, 20, 100, 0.62, 'violet', 1); b.pushHex(5, 5, 50, 1.2, '#ff2e88');
+  const list = b.list, o0 = b.list[0], o1 = b.list[1];
+  b.begin(); b.pushMood(10, 20, 100, 0.62, 'violet', 1.2); b.pushHex(5, 5, 50, 1.2, '#ff2e88');
+  assert.equal(b.list, list, 'list array reused');
+  assert.equal(b.list[0], o0, 'mood light object reused');
+  assert.equal(b.list[1], o1, 'hex light object reused');
+  assert(b.list[0].color[0] >= 0 && b.list[0].color[0] <= 1);
+});
+test('spatial: level blocked matches brute force on every mission', () => {
+  const r = new Rng(11);
+  for (const m of MISSIONS) {
+    const L = new Level(m), bs = L.blockers();
+    for (let i = 0; i < 400; i++) {
+      const x = r.range(0, L.w), y = r.range(0, L.h), rad = r.range(8, 16);
+      const oob = (x - rad < 0 || y - rad < 0 || x + rad > L.w || y + rad > L.h);
+      const brute = oob || bs.some(o => circleRect(x, y, rad, o));
+      assert.equal(L.blocked(x, y, rad), brute, `${m.id} @ ${x | 0},${y | 0}`);
+    }
   }
 });
 test('level: breaking a prop removes it from blockers and marks dirty', () => {

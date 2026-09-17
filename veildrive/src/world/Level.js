@@ -1,4 +1,5 @@
 import { circleRect, segRect, segRectEntry, dist } from '../core/math.js';
+import { SpatialHash } from '../core/SpatialHash.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { COLORS } from '../data/config.js';
 import { moodColor } from '../render/mood.js';
@@ -28,7 +29,7 @@ export class Level{
     for(const p of def.pickups) this.pickups.push({ x: p.x, y: p.y, weapon: makeWeapon(p.weapon) });
     if(this.goal.type === 'retrieve') this.objective = { x: this.goal.x, y: this.goal.y, taken: false, label: this.goal.label || 'OBJECTIVE' };
   }
-  markDirty(){ this.dirty = true; this._blockersDirty = true; }
+  markDirty(){ this.dirty = true; this._blockersDirty = true; this._hashDirty = true; }
   zoneAt(){ return this.mood; }
   // Cached collision blocker list. Movement and line-of-sight query this many
   // times per frame, so rebuilding it each call caused needless allocation and
@@ -39,6 +40,14 @@ export class Level{
       this._blockersDirty = false;
     }
     return this._blockers;
+  }
+  // Spatial indexes over the blocker set (and bullets' blocker+glass set),
+  // rebuilt with the blocker cache so queries stop scanning every object.
+  _ensureHashes(){
+    if(!this._hashDirty && this._hash && this._bulletHash) return;
+    this._hash = new SpatialHash(128).rebuild(this.blockers());
+    this._bulletHash = new SpatialHash(128).rebuild([...this.blockers(), ...this.props.filter(p=>p.type==='glass'&&!p.broken)]);
+    this._hashDirty = false;
   }
   // Direction from the spawn toward the entry-room door, used so the player
   // always starts (and respawns) facing the way out.
@@ -54,15 +63,16 @@ export class Level{
     }
     return { x, y };
   }
-  blocked(x,y,r=12){if(x-r<0||y-r<0||x+r>this.w||y+r>this.h)return true;return this.blockers().some(o=>circleRect(x,y,r,o));}
+  blocked(x,y,r=12){if(x-r<0||y-r<0||x+r>this.w||y+r>this.h)return true;this._ensureHashes();const c=this._hash.query(x,y,r);for(let i=0;i<c.length;i++)if(circleRect(x,y,r,c[i]))return true;return false;}
   moveCircle(e,dx,dy,r=e.r||12){let nx=e.x+dx;if(!this.blocked(nx,e.y,r))e.x=nx;let ny=e.y+dy;if(!this.blocked(e.x,ny,r))e.y=ny;}
-  lineBlocked(a,b){return this.blockers().some(o=>segRect(a.x,a.y,b.x,b.y,o));}
+  lineBlocked(a,b){this._ensureHashes();const c=this._hash.queryRect(a.x,a.y,b.x,b.y);for(let i=0;i<c.length;i++)if(segRect(a.x,a.y,b.x,b.y,c[i]))return true;return false;}
   bulletHit(x1,y1,x2,y2){
     // Return the NEAREST intersected blocker/prop, not the first in array
     // order: otherwise a bullet could damage a prop behind a nearer one.
+    this._ensureHashes();
+    const c=this._bulletHash.queryRect(x1,y1,x2,y2);
     let best=null,bt=Infinity;
-    for(const o of this.blockers()){const t=segRectEntry(x1,y1,x2,y2,o);if(t!==null&&t<bt){bt=t;best=o}}
-    for(const p of this.props){if(p.type==='glass'&&!p.broken){const t=segRectEntry(x1,y1,x2,y2,p);if(t!==null&&t<bt){bt=t;best=p}}}
+    for(let i=0;i<c.length;i++){const t=segRectEntry(x1,y1,x2,y2,c[i]);if(t!==null&&t<bt){bt=t;best=c[i]}}
     return best;
   }
   nearestDoor(p,max=64){let best=null,bd=max;for(const d of this.doors){if(d.broken||d.open)continue;const c={x:d.x+d.w/2,y:d.y+d.h/2},dd=dist(p,c);if(dd<bd){best=d;bd=dd}}return best;}
