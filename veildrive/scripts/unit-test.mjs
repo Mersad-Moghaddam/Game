@@ -564,6 +564,32 @@ test('art: weapon silhouettes are distinct per type', () => {
   }
   assert(counts.size >= 5, `weapons should not share silhouettes (distinct call counts: ${counts.size})`);
 });
+test('fx: transient arrays stay bounded under sustained heavy use', () => {
+  const fx = new FX();
+  for (let i = 0; i < 3000; i++) {
+    fx.burst(0, 0, 10, '#ff2e88');
+    fx.blood(0, 0, 12, 0);
+    fx.gib(0, 0, 0, 12);
+    fx.pool(0, 0, 3);
+    fx.casing(0, 0, 0);
+    fx.smoke(0, 0, 0);
+    fx.flash(0, 0, 10);
+    fx.ring(0, 0);
+    fx.ghost(0, 0, 0);
+    fx.limb(0, 0, 0);
+  }
+  assert(fx.p.length <= 900, `p ${fx.p.length}`);
+  assert(fx.decals.length <= 420, `decals ${fx.decals.length}`);
+  assert(fx.casings.length <= 140, `casings ${fx.casings.length}`);
+  assert(fx.limbs.length <= 90, `limbs ${fx.limbs.length}`);
+  assert(fx.rings.length <= 40, `rings ${fx.rings.length}`);
+  assert(fx.corpses.length <= 60, `corpses ${fx.corpses.length}`);
+  assert(fx.flashes.length <= 90, `flashes ${fx.flashes.length}`);
+  assert(fx.after.length <= 60, `after ${fx.after.length}`);
+  fx.update(0.016);
+  for (const l of fx.limbs) assert(Number.isFinite(l.x) && Number.isFinite(l.y));
+  for (const d of fx.decals) assert(Number.isFinite(d.r));
+});
 test('missions: entry metadata is well formed', () => {
   for (const m of MISSIONS) {
     assert(['door', 'stairs', 'elevator'].includes(m.entryKind), `${m.id} entry kind ${m.entryKind}`);
