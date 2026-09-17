@@ -65,7 +65,6 @@ export class FX {
     for (const r of this.rings) r.life -= dt;
     compact(this.rings, r => r.life > 0, this._ringFree);
   }
-  drawDecals(ctx) { for (const d of this.decals) { ctx.globalAlpha = d.a; ctx.fillStyle = '#7a0018'; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * .65, 0, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; }
   draw(ctx) {
     for (const l of this.limbs) {
       ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.a);

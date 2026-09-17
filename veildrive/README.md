@@ -61,12 +61,12 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 - Distinct weapon data: fists, baton, cleaver, bottle, pistol, suppressed pistol, shotgun, SMG, revolver — melee weapons are available at pickups in every mission
 - Every weapon is drawn as its own silhouette (held, thrown, on the floor and in the HUD), with a coloured ground glow so pickups read by type at a glance
 - Starts armed with the 9mm Pistol; stacking gun mods (damage, fire rate, magazine size, armor piercing)
-- Smarter enemy AI: predictive aim for hunters/elites, elite burst fire, closing distance to regain line of sight, patrol pauses, jitter-free obstacle steering, and **A\* pathfinding through doorways on a navigation grid**
+- Smarter enemy AI: predictive aim for hunters/elites, elite burst fire, closing distance to regain line of sight, patrol pauses, jitter-free obstacle steering, **A\* pathfinding through doorways on a navigation grid**, **deterministic squad roles** (suppress/flank/hold/push), **wall-muffled sound** and **seedable difficulty pressure**
 - Magazine + reserve ammunition
 - Door opening and violent breaches
 - Breakable furniture/glass and environmental collision, backed by a **spatial hash** for collision and line-of-sight queries
 - HM2-max gore: directional blood, growing pools, **dismemberment** (flying limbs and heads), **arterial jets**, overkill deaths that tear a body open, and persistent **intact / decapitated / opened** corpses — all behind the `BLOOD FX` toggle
-- Blood decals, gibs, particles, debris, impact effects, afterimages and heavy screen shake
+- Blood decals, gibs, particles, debris, impact effects, afterimages and heavy screen shake, all **pooled** (particles, casings, limbs and projectiles reuse objects and lists compact in place)
 - Hit stop for kills, melee impacts, executions and boss death
 - Enemy states: patrol, investigate, search, combat, stunned
 - Vision cone, line of sight, hearing, reaction delay and local alert propagation
@@ -104,7 +104,7 @@ Debug/quality: `settings.post` toggles the bloom/CRT chain; `settings.quality` r
 
 ## Testing
 
-- `npm test` — unit suite (Node, no browser): math, **seeded-RNG determinism and the fixed-timestep accumulator**, save persistence, weapon/upgrade data (including gun recoil/bloom/kick/penetration invariants and deep-copy safety), mood palettes, level collision and line-of-sight, **spatial-hash queries never missing an overlap (matched against brute force across every mission)**, **navigation A* routing around walls and reaching every objective with doors open**, **bounded effect arrays under sustained use**, every mission's structural invariants (clear empty entry room, a door within reach, **doors stay in bounds and never overlap walls, and every opened door is traversable**, no pickup shadows a door, valid/self-consistent goals, every enemy/waypoint/exit/objective reachable by a player-sized flood fill), player/enemy/boss behaviour (firing builds and recovers bloom/recoil), gore caps and **dismemberment/limb settling**, the character renderer (upright facings, poses, sockets, damage wear) and the art helpers.
+- `npm test` — unit suite (Node, no browser): math, **seeded-RNG determinism and the fixed-timestep accumulator**, save persistence, weapon/upgrade data (including gun recoil/bloom/kick/penetration invariants and deep-copy safety), mood palettes, level collision and line-of-sight, **spatial-hash queries never missing an overlap (matched against brute force across every mission)**, **navigation A* routing around walls and reaching every objective with doors open**, **bounded effect arrays under sustained use**, **pool object reuse**, **deterministic squad roles and difficulty pressure**, every mission's structural invariants (clear empty entry room, a door within reach, **doors stay in bounds and never overlap walls, and every opened door is traversable**, no pickup shadows a door, valid/self-consistent goals, every enemy/waypoint/exit/objective reachable by a player-sized flood fill), player/enemy/boss behaviour (firing builds and recovers bloom/recoil), gore caps and **dismemberment/limb settling**, the character renderer (upright facings, poses, sockets, damage wear) and the art helpers.
 - `npm run test:scenario` — end-to-end scenarios in headless Chromium (skips if Playwright is absent): boot, the **480×270 pixel pipeline**, menu/settings/credits, **a fixed-seed run reproducing exactly**, **characters staying upright facing either way**, spawn on the entry mat facing the door with a shield, firing, kills, gun casings/bloom/penetration, pickups, barrels, objective → exit → interlude → upgrade → next mission, the boss finale, **overkill dismemberment**, death respawn on the entry mat, the **heartbeat cue at 1 HP**, off-screen markers, save persistence across reload, pause + **pause-menu restart/quit**, idle-still enemies, resize, and the no-WebGL Canvas fallback.
 - `npm run verify` — a fast headless render probe (WebGL context, non-blank frame, no console errors).
 
@@ -113,7 +113,8 @@ Debug/quality: `settings.post` toggles the bloom/CRT chain; `settings.quality` r
 ```text
 src/
   core/
-    Game.js       Main simulation, scene/state flow, combat orchestration, rendering
+    Game.js       Thin orchestrator: loop, state machine, render, scene draw
+    RunState.js   Campaign flow: missions, masks, upgrades, scoring, death
     Input.js      Keyboard/mouse state with edge-triggered actions
     Audio.js      Web Audio synthesis and dynamic ambience
     Save.js       Versioned LocalStorage persistence
@@ -121,6 +122,7 @@ src/
     rng.js        Seedable PRNG (mulberry32); the shared simulation stream
     SpatialHash.js Uniform-grid index for collision and line-of-sight queries
     NavGrid.js    Uniform nav grid + deterministic A* pathing for enemies
+    Pool.js       Free-list helpers for effects and projectiles
   entities/
     Player.js     Movement, weapons, dash, reload, damage, procedural character art
     Enemy.js      Enemy archetypes, perception, state machine, path following
@@ -130,6 +132,13 @@ src/
   world/
     Level.js      Data-driven mission floor: layout, doors, props, pickups, collisions and line of sight
   systems/
+    Camera.js     Mouse-led follow, screen/world mapping, screen shake
+    Combat.js     Firing, projectiles, melee, throws, hazards, explosions, kills
+    AI.js         Perception, alerting, wall-muffled sound, AI cadence
+    Tactics.js    Deterministic squad roles (suppress/flank/hold/push)
+    Difficulty.js Seedable difficulty pressure (progress x attrition)
+    World.js      World bake/dirty, decal painting, lighting buffer, interaction
+    Hud.js        HUD, markers, menus and end-of-run screens
     FX.js         Particles, blood decals, afterimages and transient flashes
   render/
     Renderer.js   Three.js renderer, layer quads, EffectComposer, fallback probe

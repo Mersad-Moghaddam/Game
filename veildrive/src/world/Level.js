@@ -30,7 +30,6 @@ export class Level{
     if(this.goal.type === 'retrieve') this.objective = { x: this.goal.x, y: this.goal.y, taken: false, label: this.goal.label || 'OBJECTIVE' };
   }
   markDirty(){ this.dirty = true; this._blockersDirty = true; this._hashDirty = true; }
-  zoneAt(){ return this.mood; }
   // Cached collision blocker list. Movement and line-of-sight query this many
   // times per frame, so rebuilding it each call caused needless allocation and
   // GC hitching. It is rebuilt only when geometry changes (markDirty).

@@ -1,6 +1,5 @@
 // World: static-world bake/dirty handling, decal/corpse painting, lighting
 // buffer assembly and player-world interaction (doors, pickups, executions).
-import { COLORS } from '../data/config.js';
 import { clamp, dist } from '../core/math.js';
 import { NavGrid } from '../core/NavGrid.js';
 import { LightBuffer } from '../render/LightBuffer.js';

@@ -7,7 +7,6 @@ export const angleDiff = (a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
 export { rng } from './rng.js';
 import { rng } from './rng.js';
 export const rand = (a,b)=>rng.range(a,b);
-export const choose = a=>rng.pick(a);
 // Fixed-timestep accumulator: accumulate real frame time, emit whole fixed
 // steps and carry the remainder, capping catch-up so a long stall (tab
 // resume) cannot spiral into a huge simulation burst.
