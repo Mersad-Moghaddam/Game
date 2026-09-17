@@ -101,6 +101,25 @@ try {
   ok('determinism: same seed reproduces the run', JSON.stringify(det.a) === JSON.stringify(det.b), `score ${det.a.score} vs ${det.b.score}`);
   await evalG(() => { const g = window.__VEILDRIVE__; g.runSeed = null; g.state = 'menu'; });
 
+  // --- loop: the fixed-timestep frame accumulator is independent of the AI
+  //     accumulator, so 60 real 60Hz frames must equal ~60 sim steps (a shared
+  //     accumulator inflated this to ~3x and made the whole game run fast) ---
+  const loopRate = await page.evaluate(() => {
+    const g = window.__VEILDRIVE__;
+    g.setSeed(5); g.startRun(); g.invincible = true;
+    const raf = window.requestAnimationFrame;
+    window.requestAnimationFrame = () => 0;
+    let steps = 0;
+    const orig = g.update.bind(g);
+    g.update = dt => { steps++; orig(dt); };
+    let t = 1000; g.last = t; g.frameAcc = 0; g.acc = 0;
+    for (let i = 0; i < 60; i++) { t += 1000 / 60; g.loop(t); }
+    g.update = orig; window.requestAnimationFrame = raf;
+    g.input.keys.clear(); g.input.pressed.clear(); g.runSeed = null; g.state = 'menu';
+    return { steps };
+  });
+  ok('loop: 60 fixed steps per 60 real frames (no accumulator cross-talk)', loopRate.steps >= 58 && loopRate.steps <= 62, `steps ${loopRate.steps}`);
+
   // --- characters stay upright when facing either way (no 180-degree flip) ---
   const upright = await page.evaluate(() => {
     const g = window.__VEILDRIVE__;
@@ -152,8 +171,8 @@ try {
     g.input.keys.clear(); g.input.pressed.clear(); g.runSeed = null; g.state = 'menu';
     return { walk: Math.round(walk), dashStep, walkStep: walk / 60, maxSpeed: Math.max(...speeds), minSpeed: Math.min(...speeds), brutal };
   });
-  ok('pacing: player walk speed is in the readable band', pacing.walk >= 180 && pacing.walk <= 215, `walk ${pacing.walk}`);
-  ok('pacing: enemies stay within the readable speed band', pacing.maxSpeed <= 130 && pacing.minSpeed >= 80, `speed ${pacing.minSpeed}..${pacing.maxSpeed}`);
+  ok('pacing: player walk speed matches the baseline', pacing.walk >= 255 && pacing.walk <= 280, `walk ${pacing.walk}`);
+  ok('pacing: enemies stay within the baseline speed band', pacing.maxSpeed <= 165 && pacing.minSpeed >= 110, `speed ${pacing.minSpeed}..${pacing.maxSpeed}`);
   ok('pacing: dash still bursts faster than a walk', pacing.dashStep > pacing.walkStep * 1.5, `dash ${pacing.dashStep.toFixed(2)} vs walk ${pacing.walkStep.toFixed(2)}`);
   ok('pacing: kills stay brutal (guard one hit, elite two)', !!pacing.brutal && pacing.brutal.guard && pacing.brutal.eliteAfter1 && pacing.brutal.eliteAfter2, JSON.stringify(pacing.brutal));
 
