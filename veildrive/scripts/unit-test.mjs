@@ -215,7 +215,7 @@ test('level: breaking a prop removes it from blockers and marks dirty', () => {
 test('player: starts armed with the pistol', () => {
   const p = new Player(0, 0);
   assert.equal(p.current.id, 'pistol'); assert.equal(p.current.kind, 'gun');
-  assert.equal(p.hp, 3); assert.equal(p.maxHp, 3); assert.equal(p.magOf(p.current), p.current.mag);
+  assert.equal(p.hp, 5); assert.equal(p.maxHp, 5); assert.equal(p.magOf(p.current), p.current.mag);
 });
 test('player: gun mods stack', () => {
   const p = new Player(0, 0);
@@ -253,8 +253,8 @@ test('player: throw uses the previous weapon then fists', () => {
 test('player: damage respects invulnerability and kills', () => {
   const p = new Player(0, 0); let died = false;
   const g = stubGame(p); g.onPlayerDeath = () => { died = true; };
-  p.damage(1, g, 0); assert.equal(p.hp, 2); assert(p.invuln > 0);
-  p.damage(1, g, 0); assert.equal(p.hp, 2, 'invulnerable while i-frames active');
+  p.damage(1, g, 0); assert.equal(p.hp, 4); assert(p.invuln > 0);
+  p.damage(1, g, 0); assert.equal(p.hp, 4, 'invulnerable while i-frames active');
   p.invuln = 0; p.damage(5, g, 0);
   assert.equal(p.dead, true); assert.equal(died, true);
 });

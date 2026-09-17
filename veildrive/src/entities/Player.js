@@ -5,7 +5,7 @@ import { drawHuman } from '../render/humanoid.js';
 import { drawWeaponArt } from '../render/weapons-art.js';
 const MASK_ACCENT = { 'MOTH-0': COLORS.cyan, 'RAM-7': COLORS.orange, 'FOX-2': COLORS.cyan, 'RAVEN-3': COLORS.violet };
 export class Player{
-  constructor(x,y){this.x=x;this.y=y;this.r=13;this.a=0;this.hp=3;this.maxHp=3;this.moveSpeed=270;this.dashCooldown=.6;this.dashTimer=0;this.dashCd=0;this.dashV={x:0,y:0};this.invuln=0;this.attackCd=0;this.reloadT=0;this.reloadWeapon=null;this.reloadMul=1;this.spreadMul=1;this.meleeMul=1;this.noiseMul=1;this.damageMul=1;this.rateMul=1;this.magBonus=0;this.pierce=0;this.comboBonus=0;this.execRestoresDash=false;this.ricochet=false;this.maskId='MOTH-0';this.breachBonus=0;this.detectionMul=1;this.thrownBonus=0;this.current=makeWeapon('pistol');this.previous=null;this.dead=false;this.hitFlash=0;this.stepT=0;this.animT=0;this.vx=0;this.vy=0;this.recoil=0;this.bloom=0;this.meleeSwings=0;}
+  constructor(x,y){this.x=x;this.y=y;this.r=13;this.a=0;this.hp=5;this.maxHp=5;this.moveSpeed=270;this.dashCooldown=.6;this.dashTimer=0;this.dashCd=0;this.dashV={x:0,y:0};this.invuln=0;this.attackCd=0;this.reloadT=0;this.reloadWeapon=null;this.reloadMul=1;this.spreadMul=1;this.meleeMul=1;this.noiseMul=1;this.damageMul=1;this.rateMul=1;this.magBonus=0;this.pierce=0;this.comboBonus=0;this.execRestoresDash=false;this.ricochet=false;this.maskId='MOTH-0';this.breachBonus=0;this.detectionMul=1;this.thrownBonus=0;this.current=makeWeapon('pistol');this.previous=null;this.dead=false;this.hitFlash=0;this.stepT=0;this.animT=0;this.vx=0;this.vy=0;this.recoil=0;this.bloom=0;this.meleeSwings=0;}
   magOf(w){return Math.max(1,(w.mag||0)+this.magBonus)}
   update(dt,g){
     const i=g.input;const ox=this.x,oy=this.y;

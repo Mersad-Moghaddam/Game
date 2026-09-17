@@ -41,7 +41,7 @@ const snap = () => page.evaluate(() => {
     goalDone: g.goalDone, exitActive: g.level ? g.level.exit.active : null,
     enemies: g.enemies ? g.enemies.filter(e => !e.dead).length : null,
     boss: g.boss && !g.boss.dead ? g.boss.hp : null,
-    hp: g.player ? g.player.hp : null, weapon: g.player ? g.player.current.id : null,
+    hp: g.player ? g.player.hp : null, maxHp: g.player ? g.player.maxHp : null, weapon: g.player ? g.player.current.id : null,
     ammo: g.player && g.player.current.ammo != null ? g.player.current.ammo : null,
     shots: g.shots, kills: g.killCount, combo: g.combo,
     results: g.results || null, deaths: g.deaths, renderer: !!(g.renderer && g.renderer.available),
@@ -227,8 +227,8 @@ try {
   // --- death restarts the current mission with full health ---
   const beforeDeath = await snap();
   await evalG(() => { const g = window.__VEILDRIVE__; g.player.invuln = 0; g.player.damage(99, g); });
-  const afterDeath = await waitFor(s => s.hp === 3 && s.state === 'playing', 9000);
-  ok('death: rewinds the current mission at full health', afterDeath.mi === beforeDeath.mi && afterDeath.hp === 3 && afterDeath.deaths > 0, JSON.stringify(afterDeath));
+  const afterDeath = await waitFor(s => s.hp === s.maxHp && s.state === 'playing', 9000);
+  ok('death: rewinds the current mission at full health', afterDeath.mi === beforeDeath.mi && afterDeath.hp === afterDeath.maxHp && afterDeath.deaths > 0, JSON.stringify(afterDeath));
   const deathPos = await evalG(() => { const g = window.__VEILDRIVE__, sp = g.level.def.spawn; return { d: Math.hypot(g.player.x - sp.x, g.player.y - sp.y), inv: g.player.invuln }; });
   ok('death: respawns on the entry mat with a fresh shield', deathPos.d < 2 && deathPos.inv > 0, JSON.stringify(deathPos));
 
@@ -354,7 +354,7 @@ try {
   ok('pause: menu selects restart', pIdx === 1, `index ${pIdx}`);
   await page.keyboard.press('Enter');
   const rstate = await waitFor(s => s.state === 'playing', 5000);
-  ok('pause: restart resumes the mission at full health', rstate.state === 'playing' && rstate.hp === 3, JSON.stringify(rstate));
+  ok('pause: restart resumes the mission at full health', rstate.state === 'playing' && rstate.hp === rstate.maxHp, JSON.stringify(rstate));
   await page.keyboard.press('Escape'); await sleep(120);
   await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter'); await sleep(200);
