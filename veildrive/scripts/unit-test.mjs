@@ -5,6 +5,8 @@ import { SpatialHash } from '../src/core/SpatialHash.js';
 import { LightBuffer } from '../src/render/LightBuffer.js';
 import { NavGrid } from '../src/core/NavGrid.js';
 import { obtain, compact } from '../src/core/Pool.js';
+import { assignRoles } from '../src/systems/Tactics.js';
+import { pressure } from '../src/systems/Difficulty.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
@@ -604,6 +606,23 @@ test('pool: obtain reuses freed objects and compact recycles the dead', () => {
   assert.equal(arr.length, 2);
   assert(arr.every(o => o.life > 0), 'only live objects remain');
   assert(free.length >= 2, 'dead objects are recycled');
+});
+test('tactics: roles are assigned deterministically to engaged enemies', () => {
+  const mk = state => ({ dead: false, state, role: null });
+  const enemies = [mk('COMBAT'), mk('PATROL'), mk('COMBAT'), mk('COMBAT'), mk('COMBAT')];
+  const roles = assignRoles(enemies);
+  assert.equal(enemies[0].role, 'suppress');
+  assert.equal(enemies[1].role, null, 'unengaged enemies get no role');
+  assert.equal(enemies[2].role, 'flank');
+  assert.equal(enemies[3].role, 'hold');
+  assert.deepEqual(roles, assignRoles(enemies), 'assignment is stable for the same order');
+});
+test('difficulty: pressure is bounded, monotonic in progress, and deterministic', () => {
+  assert(pressure(0, 10, 10) === 0, 'no pressure at the start with everyone alive');
+  assert(pressure(4, 0, 10) === 1, 'full pressure late with no hostiles left');
+  let last = -1;
+  for (let m = 0; m <= 4; m++) { const p = pressure(m, 5, 10); assert(p >= 0 && p <= 1); assert(p >= last, 'monotonic in mission index'); last = p; }
+  assert.equal(pressure(2, 3, 10), pressure(2, 3, 10));
 });
 test('fx: transient arrays stay bounded under sustained heavy use', () => {
   const fx = new FX();

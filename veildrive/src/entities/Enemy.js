@@ -60,21 +60,22 @@ export class Enemy{
     }else if(clear)this.avoidT=0;
     this.a=Math.atan2(n.y,n.x);g.level.moveCircle(this,n.x*this.speed*m*dt,n.y*this.speed*m*dt,this.r);
   }
- combat(dt,g,p){
-   const w=this.weapon,d=dist(this,p),to=Math.atan2(p.y-this.y,p.x-this.x);this.lastKnown={x:p.x,y:p.y};this.alertT=4;const los=!g.level.lineBlocked(this,p);
-   // Accurate types lead the player's movement.
-   let aim=to;if(this.type==='hunter'||this.type==='elite'){const lead=Math.min(.22,d/980);aim=Math.atan2(p.y+(p.vy||0)*lead-this.y,p.x+(p.vx||0)*lead-this.x);}this.a=aim;
-   if(w.kind==='melee'){if(d>36)this.moveToward(p,dt,g,1.05);else if(this.attackCd<=0&&los){this.attackCd=.7;g.enemyMelee(this,p)}}
-   else{
-     const ideal=this.type==='shotgunner'?175:this.type==='hunter'?260:230;let mx=0,my=0;
-     if(!los){const n=norm(p.x-this.x,p.y-this.y);mx=n.x;my=n.y;}                 // close the gap to regain line of sight
-     else if(d>ideal+45){const n=norm(p.x-this.x,p.y-this.y);mx=n.x;my=n.y}
-     else if(d<ideal-55){const n=norm(this.x-p.x,this.y-p.y);mx=n.x;my=n.y}
-     else if(this.type==='hunter'){const n=norm(p.x-this.x,p.y-this.y);mx=-n.y*this.strafe;my=n.x*this.strafe}
-     g.level.moveCircle(this,mx*this.speed*.65*dt,my*this.speed*.65*dt,this.r);
-     if(los&&this.attackCd<=0){this.attackCd=w.rate*(this.type==='elite'?.85:1)+rand(.03,.12);g.enemyShoot(this,w,aim+rand(-.05,.05)*(this.type==='elite'?.5:1.2));if(this.type==='elite'){this.burst=2;this.burstT=.12;}}
-   }
- }
+  combat(dt,g,p){
+    const w=this.weapon,d=dist(this,p),to=Math.atan2(p.y-this.y,p.x-this.x);this.lastKnown={x:p.x,y:p.y};this.alertT=4;const los=!g.level.lineBlocked(this,p);const pres=g.pressureVal||0;
+    // Accurate types lead the player's movement.
+    let aim=to;if(this.type==='hunter'||this.type==='elite'){const lead=Math.min(.22,d/980);aim=Math.atan2(p.y+(p.vy||0)*lead-this.y,p.x+(p.vx||0)*lead-this.x);}this.a=aim;
+    if(w.kind==='melee'){if(d>36)this.moveToward(p,dt,g,1.05);else if(this.attackCd<=0&&los){this.attackCd=.7;g.enemyMelee(this,p)}}
+    else{
+      const ideal=this.type==='shotgunner'?175:this.type==='hunter'?260:230;let mx=0,my=0;
+      if(!los){const n=norm(p.x-this.x,p.y-this.y);mx=n.x;my=n.y;}                 // close the gap to regain line of sight
+      else if(d>ideal+45){const n=norm(p.x-this.x,p.y-this.y);mx=n.x;my=n.y}
+      else if(d<ideal-55){const n=norm(this.x-p.x,this.y-p.y);mx=n.x;my=n.y}
+      else if(this.role==='flank'){const n=norm(p.x-this.x,p.y-this.y);mx=-n.y*this.strafe;my=n.x*this.strafe}
+      else if(this.type==='hunter'){const n=norm(p.x-this.x,p.y-this.y);mx=-n.y*this.strafe;my=n.x*this.strafe}
+      g.level.moveCircle(this,mx*this.speed*.65*dt,my*this.speed*.65*dt,this.r);
+      if(los&&this.attackCd<=0){this.attackCd=(w.rate*(this.type==='elite'?.85:1)+rand(.03,.12))*(1-pres*.15);g.enemyShoot(this,w,aim+rand(-.05,.05)*(this.type==='elite'?.5:1.2)*(1-pres*.35));if(this.type==='elite'){this.burst=2;this.burstT=.12;}}
+    }
+  }
  updateBurst(dt,g,p){if(this.burst<=0)return;this.burstT-=dt;if(this.burstT>0)return;this.burst--;this.burstT=.13;if(this.state==='COMBAT'&&p&&!p.dead&&!g.level.lineBlocked(this,p)){const to=Math.atan2(p.y-this.y,p.x-this.x);g.enemyShoot(this,this.weapon,to+rand(-.07,.07));}}
  damage(n,g,angle=0,knock=110){if(this.dead)return;this.hp-=n;this.state='COMBAT';this.stun=.08;this.knockX=Math.cos(angle)*knock;this.knockY=Math.sin(angle)*knock;if(this.hp<=0){this.dead=true;g.onEnemyKilled(this,angle,n)}else{g.fx.blood(this.x,this.y,7,angle);g.shake(2)}}
  stunHit(g,angle,power=180){if(this.dead)return;this.stun=.72;this.state='COMBAT';this.knockX=Math.cos(angle)*power;this.knockY=Math.sin(angle)*power;g.fx.burst(this.x,this.y,7,'#d6d0b7',100,.35,3)}

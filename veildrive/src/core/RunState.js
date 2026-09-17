@@ -39,6 +39,7 @@ export const RunStateSystem = {
     }
     if (def.goal.type === 'target' && !this.target && this.enemies.length) this.target = this.enemies[0];
     if (def.goal.type === 'boss' && def.boss) this.boss = new Boss(def.boss.x, def.boss.y);
+    this._maxAlive = this.enemies.length + (this.boss ? 1 : 0);
     this.goalDone = false; this.level.exit.active = false; this.freeze = 0;
     this.missionTime = 0; this.deathT = 0; this.roomClearT = 0; this.heartT = 0; this.introT = 0;
     this.updateCamera(0); this.cam.x = this.cam.tx; this.cam.y = this.cam.ty;

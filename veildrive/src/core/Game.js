@@ -50,7 +50,7 @@ export class Game {
     if (this.input.tap('F4')) { for (const e of this.enemies) e.dead = true; if (this.boss) this.boss.dead = true; }
     this.introT = Math.min(6, (this.introT || 0) + dt); this.missionTime += dt; this.campaignTime += dt; this.hurtFlash = Math.max(0, (this.hurtFlash || 0) - dt * 1.6); this.heartT = Math.max(0, this.heartT - dt); this.audio.decayPulse(dt); if (this.player.hp === 1 && this.heartT <= 0) { this.heartT = .9; this.audio.play('heartbeat'); } this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; if (this.player.dead) { this.deathT += dt; if (this.deathT > .5) this.restartAfterDeath(); return; }
     this.player.update(dt, this); this.updateCamera(dt); this.fx.update(dt); this.updateProjectiles(dt); this.updateThrown(dt); this.updateHazards(dt);
-    this.acc += dt; if (this.acc >= this.aiStep) { this.perceiveAll(); this.acc = 0; }
+    this.acc += dt; if (this.acc >= this.aiStep) { this.aiTick(); this.acc = 0; }
     for (const e of this.enemies) e.update(dt, this); if (this.boss) this.boss.update(dt, this);
     if (!this.goalDone) { const g = this.mission.goal; if (g.type === 'eliminate' && !this.enemies.some(e => !e.dead)) this.completeGoal(); else if (g.type === 'target' && this.target && this.target.dead) this.completeGoal(); else if (g.type === 'boss' && this.boss && this.boss.dead) this.completeGoal(); }
     this.audio.setIntensity(clamp((this.enemies.filter(e => e.state === 'COMBAT' && !e.dead).length + (this.boss && !this.boss.dead ? 3 : 0)) / 7, 0.08, 1));
