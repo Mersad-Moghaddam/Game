@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { clamp, lerp, dist, norm, angleDiff, pointSegDist, circleRect, segRect } from '../src/core/math.js';
+import { clamp, lerp, dist, norm, angleDiff, pointSegDist, circleRect, segRect, advance } from '../src/core/math.js';
+import { Rng, mulberry32 } from '../src/core/rng.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
@@ -39,6 +40,29 @@ test('math: segRect detects a thin wall between samples', () => {
 });
 test('math: segRect clear when no intersection', () => {
   assert.equal(segRect(0, 0, 100, 0, { x: 0, y: 50, w: 100, h: 10 }), false);
+});
+
+// ------------------------------------------------------------------ rng
+test('rng: same seed yields the same sequence, different seeds differ', () => {
+  const seq = r => Array.from({ length: 8 }, () => r.random());
+  assert.deepEqual(seq(new Rng(42)), seq(new Rng(42)));
+  assert.notDeepEqual(seq(new Rng(42)), seq(new Rng(43)));
+});
+test('rng: integer/range stay in bounds and mulberry32 is stable', () => {
+  const r = new Rng(7);
+  for (let i = 0; i < 200; i++) {
+    const v = r.range(-3, 5); assert(v >= -3 && v < 5);
+    const n = r.int(6); assert(Number.isInteger(n) && n >= 0 && n < 6);
+    assert.equal(typeof r.chance(0.5), 'boolean');
+    assert(r.pick([1, 2, 3]) >= 1);
+  }
+  assert.equal(mulberry32(123)(), mulberry32(123)());
+});
+test('timestep: accumulator yields deterministic step counts and never runs away', () => {
+  let acc = 0; const counts = [];
+  for (const dt of [0.016, 0.016, 0.05, 0.016]) { const r = advance(acc, dt, 1 / 60, 5); acc = r.acc; counts.push(r.steps); }
+  assert.deepEqual(counts, [0, 1, 3, 1]);
+  assert.equal(advance(0, 10, 1 / 60, 5).steps, 5, 'catch-up is capped');
 });
 
 // ------------------------------------------------------------- weapons

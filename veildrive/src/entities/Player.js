@@ -1,4 +1,5 @@
 import { norm, clamp } from '../core/math.js';
+import { rng } from '../core/rng.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { COLORS } from '../data/config.js';
 import { drawHuman } from '../render/humanoid.js';
@@ -40,7 +41,7 @@ export class Player{
   }
   startDash(n,g){if(this.dashCd>0||this.reloadT>0)return;let d=n;if(!d.x&&!d.y)d={x:Math.cos(this.a),y:Math.sin(this.a)};this.dashTimer=.13;this.dashCd=this.dashCooldown;this.invuln=.12;this.dashV={x:d.x*640,y:d.y*640};g.audio.play('dash');g.shake(5);}
   shoot(g){const w=this.current;if(!(w.ammo>0)){this.attackCd=.18;g.audio.play('empty');if(w.reserve>0)this.reload(g);return}w.ammo--;const rate=Number.isFinite(w.rate)&&w.rate>0?w.rate:0.25;this.attackCd=rate*this.rateMul+(w.cycle||0);g.fireWeapon(this,w,this.a+this.recoil);
-    this.recoil+=(w.recoil||.015)*(Math.random()*2-1);this.bloom=Math.min(w.bloomMax||.1,this.bloom+(w.bloom||.015));
+    this.recoil+=(w.recoil||.015)*(rng.random()*2-1);this.bloom=Math.min(w.bloomMax||.1,this.bloom+(w.bloom||.015));
     if(w.kick)g.level.moveCircle(this,-Math.cos(this.a)*w.kick,-Math.sin(this.a)*w.kick);
     if(w.ammo===0)this.attackCd+=.04;}
   melee(g){this.attackCd=this.current.rate;this.meleeSwings=(this.meleeSwings||0)+1;g.meleeAttack(this,this.current,this.a);}

@@ -10,7 +10,8 @@ import { FX } from '../systems/FX.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { drawWeaponArt } from '../render/weapons-art.js';
 import { MISSIONS, MISSION_COUNT } from '../data/missions.js';
-import { clamp,dist,angleDiff,pointSegDist,rand } from './math.js';
+import { clamp,dist,angleDiff,pointSegDist,rand,advance } from './math.js';
+import { rng } from './rng.js';
 import * as THREE from 'three';
 import { moodColor } from '../render/mood.js';
 export class Game{
@@ -64,7 +65,7 @@ export class Game{
  }
  updateMenu(){const items=5;if(this.input.tap('ArrowDown')||this.input.tap('KeyS')){this.menuIndex=(this.menuIndex+1)%items;this.audio.play('ui')}if(this.input.tap('ArrowUp')||this.input.tap('KeyW')){this.menuIndex=(this.menuIndex+items-1)%items;this.audio.play('ui')}if(this.menuIndex===1&&(this.input.tap('ArrowLeft')||this.input.tap('KeyA')))this.cycleMask(-1);if(this.menuIndex===1&&(this.input.tap('ArrowRight')||this.input.tap('KeyD')))this.cycleMask(1);if(this.input.tap('Enter')||this.input.mouse.leftPressed){if(this.input.mouse.leftPressed){const y=this.input.mouse.y;this.menuIndex=clamp(Math.floor((y-270)/40),0,4)}if(this.menuIndex===0)this.startRun();if(this.menuIndex===1)this.cycleMask(1);if(this.menuIndex===2)this.state='settings';if(this.menuIndex===3)this.state='credits';if(this.menuIndex===4)location.reload();}}
    updateSettings(){const keys=['master','music','sfx','shake','blood','quality','post','pixel','flashes','highContrastCursor'];if(this.input.tap('Escape')){this.save.settings=this.settings;storeSave(this.save);this.state='menu';return}if(this.input.tap('ArrowDown')||this.input.tap('KeyS'))this.settingsIndex=(this.settingsIndex+1)%keys.length;if(this.input.tap('ArrowUp')||this.input.tap('KeyW'))this.settingsIndex=(this.settingsIndex+keys.length-1)%keys.length;const k=keys[this.settingsIndex],dir=(this.input.tap('ArrowRight')||this.input.tap('KeyD')?1:0)-(this.input.tap('ArrowLeft')||this.input.tap('KeyA')?1:0);if(dir){if(typeof this.settings[k]==='boolean')this.settings[k]=!this.settings[k];else this.settings[k]=clamp(this.settings[k]+dir*.1,0,1);this.audio.apply();this.fx.bloodEnabled=this.settings.blood;this.fx.quality=this.settings.quality;this.applyDomSettings();this.applyRenderSettings();this.audio.play('ui')}}
- showUpgrade(){this.upgradeShown=true;this.state='upgrade';const pool=[...UPGRADES];this.upgradeChoices=[];while(this.upgradeChoices.length<3){const u=pool.splice((Math.random()*pool.length)|0,1)[0];this.upgradeChoices.push(u)}this.audio.play('ui')}
+ showUpgrade(){this.upgradeShown=true;this.state='upgrade';const pool=[...UPGRADES];this.upgradeChoices=[];while(this.upgradeChoices.length<3){const u=pool.splice(rng.int(pool.length),1)[0];this.upgradeChoices.push(u)}this.audio.play('ui')}
    updateUpgrade(){let idx=-1;if(this.input.tap('Digit1'))idx=0;if(this.input.tap('Digit2'))idx=1;if(this.input.tap('Digit3'))idx=2;if(this.input.mouse.leftPressed){const x=this.input.mouse.x;idx=clamp(Math.floor((x-135)/235),0,2)}if(idx>=0){const u=this.upgradeChoices[idx];u.apply(this.player);this.activeUpgrades.push(u.id);this.player.hp=Math.min(this.player.maxHp,this.player.hp+1);this.audio.play('pickup');this.startMission(this.missionIndex+1,false);}}
   restartAfterDeath(){this.startMission(this.missionIndex,false,true);}
  screenToWorld(x,y){return{x:x+this.cam.x-this.shakeX,y:y+this.cam.y-this.shakeY}}
@@ -101,7 +102,7 @@ export class Game{
     if(overkill>=99||overkill>=3){this.fx.limb(e.x,e.y,angle,'arm');this.fx.limb(e.x,e.y,angle,'leg');this.fx.headPop(e.x,e.y,angle);this.fx.addCorpse(e.x,e.y,angle,'opened')}
     else if(overkill>=2||e.type==='elite'){this.fx.headPop(e.x,e.y,angle);this.fx.limb(e.x,e.y,angle,'arm');this.fx.addCorpse(e.x,e.y,angle,'decap')}
     else this.fx.addCorpse(e.x,e.y,angle,'intact');
-    this.fx.pool(e.x,e.y,2.5);this.audio.play('kill');this.shake(overkill>=3?11:9);this.hitStop(.06);this.addCombo(wasStealth?175:120);if(Math.random()<.48&&e.weapon)this.level.pickups.push({x:e.x,y:e.y,weapon:makeWeapon(e.weapon.id)});}
+    this.fx.pool(e.x,e.y,2.5);this.audio.play('kill');this.shake(overkill>=3?11:9);this.hitStop(.06);this.addCombo(wasStealth?175:120);if(rng.chance(.48)&&e.weapon)this.level.pickups.push({x:e.x,y:e.y,weapon:makeWeapon(e.weapon.id)});}
    onBossKilled(b){this.fx.blood(b.x,b.y,28,this.player.a);this.fx.limb(b.x,b.y,this.player.a,'arm');this.fx.limb(b.x,b.y,this.player.a,'leg');this.fx.headPop(b.x,b.y,this.player.a);this.fx.addCorpse(b.x,b.y,this.player.a,'opened');this.fx.burst(b.x,b.y,24,'#d4b46a',230,.7,5);this.fx.ring(b.x,b.y,COLORS.cyan,240,.6);this.score+=1800;this.addCombo(500);this.shake(16);this.hitStop(.08);this.renderer?.glitch?.(1);}
  addCombo(base){this.combo++;this.comboT=2.25+this.player.comboBonus;this.maxCombo=Math.max(this.maxCombo,this.combo);this.score+=Math.round(base*(1+Math.min(3,this.combo*.18)));}
  hitStop(sec){this.freeze=Math.max(this.freeze||0,sec)}

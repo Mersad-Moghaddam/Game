@@ -1,4 +1,5 @@
 import { dist, norm, angleDiff, rand } from '../core/math.js';
+import { rng } from '../core/rng.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { drawHuman, shade } from '../render/humanoid.js';
 const TYPES={
@@ -9,7 +10,7 @@ const TYPES={
  elite:{hp:2,speed:160,weapon:'revolver',fov:2.05,vision:470,hear:1.2,reaction:.14,color:'#7a3bff',accent:'#b06bff'}
 };
 export class Enemy{
- constructor(x,y,type='guard',waypoints=[]){const c=TYPES[type];Object.assign(this,{x,y,r:12,type,state:'PATROL',a:0,hp:c.hp,maxHp:c.hp,speed:c.speed,fov:c.fov,vision:c.vision,hear:c.hear,reaction:c.reaction,color:c.color,accent:c.accent,animT:0,weapon:makeWeapon(c.weapon),waypoints,wp:0,dead:false,stun:0,attackCd:rand(.1,.5),seenT:0,alertT:0,searchT:0,lastKnown:null,strafe:Math.random()<.5?-1:1,knockX:0,knockY:0,avoidDir:null,avoidT:0,wpWait:0,burst:0,burstT:0});}
+ constructor(x,y,type='guard',waypoints=[]){const c=TYPES[type];Object.assign(this,{x,y,r:12,type,state:'PATROL',a:0,hp:c.hp,maxHp:c.hp,speed:c.speed,fov:c.fov,vision:c.vision,hear:c.hear,reaction:c.reaction,color:c.color,accent:c.accent,animT:0,weapon:makeWeapon(c.weapon),waypoints,wp:0,dead:false,stun:0,attackCd:rand(.1,.5),seenT:0,alertT:0,searchT:0,lastKnown:null,strafe:rng.chance(.5)?-1:1,knockX:0,knockY:0,avoidDir:null,avoidT:0,wpWait:0,burst:0,burstT:0});}
  perceive(g){if(this.dead)return;for(const other of g.enemies){if(other!==this&&other.dead&&!this._sawBody&&dist(this,other)<150&&!g.level.lineBlocked(this,other)){this._sawBody=true;this.state='INVESTIGATE';this.lastKnown={x:other.x,y:other.y};this.searchT=3.5;g.alertNearby(this.x,this.y,190,other);break}}const p=g.player,d=dist(this,p),to=Math.atan2(p.y-this.y,p.x-this.x),inCone=Math.abs(angleDiff(this.a,to))<this.fov*.5;const visible=d<this.vision*(g.player.detectionMul||1)&&inCone&&!g.level.lineBlocked(this,p);if(visible){this.seenT+=g.aiStep;if(this.seenT>=this.reaction){this.state='COMBAT';this.lastKnown={x:p.x,y:p.y};this.alertT=4;g.alertNearby(this.x,this.y,220,p);}}else{this.seenT=Math.max(0,this.seenT-g.aiStep*1.6);if(this.state==='COMBAT'){this.alertT-=g.aiStep;if(this.alertT<=0){this.state='SEARCH';this.searchT=3.5}}}}
  hearNoise(ev,g){if(this.dead)return;const d=dist(this,ev);if(d<ev.radius*this.hear){if(this.state!=='COMBAT'){this.state='INVESTIGATE';this.lastKnown={x:ev.x,y:ev.y};this.searchT=3}if(ev.radius>300)g.alertNearby(this.x,this.y,170,ev)}}
  update(dt,g){

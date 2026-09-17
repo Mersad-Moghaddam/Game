@@ -1,4 +1,5 @@
 import { dist, norm, rand } from '../core/math.js';
+import { rng } from '../core/rng.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { COLORS } from '../data/config.js';
 import { drawHuman } from '../render/humanoid.js';
@@ -6,7 +7,7 @@ export class Boss{
   constructor(x,y){this.x=x;this.y=y;this.r=19;this.a=0;this.hp=16;this.maxHp=16;this.dead=false;this.phase=1;this.cool=1;this.mode='gun';this.telegraph=0;this.chargeT=0;this.stun=0;this.weapon=makeWeapon('revolver');this.name='THE PORTER';this.burst=0;}
   update(dt,g){if(this.dead||g.player.dead)return;const p=g.player,d=dist(this,p);this.cool-=dt;if(this.stun>0){this.stun-=dt;return}this.phase=this.hp>10?1:this.hp>5?2:3;
     if(this.phase<3){const n=norm(p.x-this.x,p.y-this.y);this.a=Math.atan2(n.y,n.x);const ideal=this.phase===1?300:245;if(d>ideal+40)g.level.moveCircle(this,n.x*88*dt,n.y*88*dt,this.r);else if(d<ideal-55)g.level.moveCircle(this,-n.x*70*dt,-n.y*70*dt,this.r);
-      if(this.cool<=0){if(this.phase===1){this.burst=3;this.cool=1.2;}else{if(Math.random()<.48){g.spawnHazard(this.x,this.y,this.a);this.cool=1.95}else{this.burst=4;this.cool=1.55}}}
+      if(this.cool<=0){if(this.phase===1){this.burst=3;this.cool=1.2;}else{if(rng.chance(.48)){g.spawnHazard(this.x,this.y,this.a);this.cool=1.95}else{this.burst=4;this.cool=1.55}}}
       if(this.burst>0&&this.cool<(1.2-(4-this.burst)*.14)){g.enemyShoot(this,this.weapon,this.a+rand(-.05,.05));this.burst--;}
     }else{
       if(this.mode==='gun'&&this.cool<=0){this.mode='telegraph';this.telegraph=.72;this.a=Math.atan2(p.y-this.y,p.x-this.x);this.cool=1.8;g.audio.play('boss')}
