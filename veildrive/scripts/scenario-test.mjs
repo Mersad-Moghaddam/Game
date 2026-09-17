@@ -88,6 +88,19 @@ try {
   });
   ok('pixel: PIXEL WORLD toggles between pixel and crisp rendering', pixTog.skipped || (pixTog.on === 480 && pixTog.off === 960 && pixTog.back === 480 && pixTog.restored === 960), JSON.stringify(pixTog));
 
+  // --- determinism: the same seed reproduces a fixed-timestep run exactly ---
+  const det = await page.evaluate(() => {
+    const g = window.__VEILDRIVE__;
+    const run = seed => {
+      g.setSeed(seed); g.startRun(); g.invincible = true;
+      for (let i = 0; i < 600; i++) g.step(1 / 60);
+      return { hp: g.player.hp, score: g.score, ex: g.enemies.map(e => Math.round(e.x * 100)) };
+    };
+    return { a: run(1234), b: run(1234) };
+  });
+  ok('determinism: same seed reproduces the run', JSON.stringify(det.a) === JSON.stringify(det.b), `score ${det.a.score} vs ${det.b.score}`);
+  await evalG(() => { const g = window.__VEILDRIVE__; g.runSeed = null; g.state = 'menu'; });
+
   // --- menu: masks, settings, credits ---
   await evalG(() => { const g = window.__VEILDRIVE__; g.save.unlockedMasks = ['MOTH-0', 'RAM-7']; g.save.selectedMask = 'MOTH-0'; });
   await evalG(() => { window.__VEILDRIVE__.menuIndex = 1; });
