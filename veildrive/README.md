@@ -54,17 +54,17 @@ Combat is intentionally brutal and fast: MOTH-0 starts the campaign armed with a
 
 ## Implemented systems
 
-- 60 FPS delta-time game loop and responsive 16:9 letterboxing
+- Fixed-timestep 60 Hz simulation with a capped catch-up accumulator, a **seedable RNG** and deterministic replays, plus responsive 16:9 letterboxing
 - Tight top-down movement, normalized diagonals, aim look-ahead, dash, invulnerability window
 - Melee, firearms, reloads, recoil feedback, muzzle flashes, tracers, thrown weapons, shell casings and muzzle smoke
 - Grounded-but-arcade gun handling: per-weapon **aim recoil** (muzzle climb that recovers), **spread bloom** that builds while firing, a physical **kick**, **pump/slide cycle** time, **penetration** (the revolver punches through), a **visible reload state** and distinct reload timings
 - Distinct weapon data: fists, baton, cleaver, bottle, pistol, suppressed pistol, shotgun, SMG, revolver — melee weapons are available at pickups in every mission
 - Every weapon is drawn as its own silhouette (held, thrown, on the floor and in the HUD), with a coloured ground glow so pickups read by type at a glance
 - Starts armed with the 9mm Pistol; stacking gun mods (damage, fire rate, magazine size, armor piercing)
-- Smarter enemy AI: predictive aim for hunters/elites, elite burst fire, closing distance to regain line of sight, patrol pauses, and jitter-free obstacle steering
+- Smarter enemy AI: predictive aim for hunters/elites, elite burst fire, closing distance to regain line of sight, patrol pauses, jitter-free obstacle steering, and **A\* pathfinding through doorways on a navigation grid**
 - Magazine + reserve ammunition
 - Door opening and violent breaches
-- Breakable furniture/glass and environmental collision
+- Breakable furniture/glass and environmental collision, backed by a **spatial hash** for collision and line-of-sight queries
 - HM2-max gore: directional blood, growing pools, **dismemberment** (flying limbs and heads), **arterial jets**, overkill deaths that tear a body open, and persistent **intact / decapitated / opened** corpses — all behind the `BLOOD FX` toggle
 - Blood decals, gibs, particles, debris, impact effects, afterimages and heavy screen shake
 - Hit stop for kills, melee impacts, executions and boss death
@@ -92,6 +92,7 @@ The game is simulated entirely in 2D and rendered through a GPU pipeline with a 
 
 - **Three.js (r186)** is vendored under `vendor/` and loaded with an import map in `index.html` — no bundler and no CDN. `scripts/build.mjs` copies `vendor/` into `dist/`.
 - **Layer model.** Each frame the existing Canvas-2D drawing code renders two 960×540 offscreen canvases: *albedo* (the lit scene) and *emissive* (glow only). Both become `CanvasTexture`s on full-screen quads in an `OrthographicCamera` scene.
+- **Characters.** `src/render/character.js` draws an articulated figure **upright in the world frame**: body orientation comes from the facing quadrant (mirrored for the left half, never inverted) while the arms and weapon follow the true aim, so a character facing left no longer renders upside down. Seven archetypes (MOTH-0, guard, brawler, shotgunner, hunter, elite, PORTER) have distinct builds, outfits, masks/visors and gear, a full pose set (idle/walk/run/aim/melee/reload/hurt/stunned/dead), multi-tone cloth shading and HP-driven damage wear.
 - **Lighting.** A custom `ShaderPass` (`src/render/shaders.js`) combines `albedo × lights + emissive` using up to 16 mood-coloured lights plus ambient. Lights flicker and brighten on the beat; `src/render/mood.js` holds the four mood palettes (`sunset`, `violet`, `toxic`, `blood`) used per zone.
 - **Pixel pipeline (opt-in).** The default design is crisp 960×540. With **PIXEL WORLD** on, the world instead renders internally at **480×270** (`PIXEL = 2`) and is upscaled with nearest-neighbour, giving chunky Hotline Miami 2 pixels. Simulation and HUD coordinates stay 960×540 either way (layer contexts get a `1/PIXEL` scale), so no gameplay math changes and the UI stays sharp. The setting toggles at runtime.
 - **Post.** `EffectComposer`: render → lighting → `UnrealBloomPass` (neon bloom) → CRT/VHS pass (chromatic aberration, scanlines, barrel distortion, vignette, grain, glitch bursts on damage/explosions) → `OutputPass`. A palette-quantise + 2×2 ordered dither step gives the limited-colour, banded pixel-art look.
@@ -103,8 +104,8 @@ Debug/quality: `settings.post` toggles the bloom/CRT chain; `settings.quality` r
 
 ## Testing
 
-- `npm test` — unit suite (Node, no browser): math, save persistence, weapon/upgrade data (including gun recoil/bloom/kick/penetration invariants and deep-copy safety), mood palettes, level collision and line-of-sight, every mission's structural invariants (clear empty entry room, a door within reach, **doors stay in bounds and never overlap walls, and every opened door is traversable**, no pickup shadows a door, valid/self-consistent goals, every enemy/waypoint/exit/objective reachable by a player-sized flood fill), player/enemy/boss behaviour (firing builds and recovers bloom/recoil), gore caps and **dismemberment/limb settling**, and the art helpers.
-- `npm run test:scenario` — end-to-end scenarios in headless Chromium (skips if Playwright is absent): boot, the **480×270 pixel pipeline**, menu/settings/credits, spawn on the entry mat facing the door with a shield, firing, kills, gun casings/bloom/penetration, pickups, barrels, objective → exit → interlude → upgrade → next mission, the boss finale, **overkill dismemberment**, death respawn on the entry mat, the **heartbeat cue at 1 HP**, off-screen markers, save persistence across reload, pause + **pause-menu restart/quit**, idle-still enemies, resize, and the no-WebGL Canvas fallback.
+- `npm test` — unit suite (Node, no browser): math, **seeded-RNG determinism and the fixed-timestep accumulator**, save persistence, weapon/upgrade data (including gun recoil/bloom/kick/penetration invariants and deep-copy safety), mood palettes, level collision and line-of-sight, **spatial-hash queries never missing an overlap (matched against brute force across every mission)**, **navigation A* routing around walls and reaching every objective with doors open**, **bounded effect arrays under sustained use**, every mission's structural invariants (clear empty entry room, a door within reach, **doors stay in bounds and never overlap walls, and every opened door is traversable**, no pickup shadows a door, valid/self-consistent goals, every enemy/waypoint/exit/objective reachable by a player-sized flood fill), player/enemy/boss behaviour (firing builds and recovers bloom/recoil), gore caps and **dismemberment/limb settling**, the character renderer (upright facings, poses, sockets, damage wear) and the art helpers.
+- `npm run test:scenario` — end-to-end scenarios in headless Chromium (skips if Playwright is absent): boot, the **480×270 pixel pipeline**, menu/settings/credits, **a fixed-seed run reproducing exactly**, **characters staying upright facing either way**, spawn on the entry mat facing the door with a shield, firing, kills, gun casings/bloom/penetration, pickups, barrels, objective → exit → interlude → upgrade → next mission, the boss finale, **overkill dismemberment**, death respawn on the entry mat, the **heartbeat cue at 1 HP**, off-screen markers, save persistence across reload, pause + **pause-menu restart/quit**, idle-still enemies, resize, and the no-WebGL Canvas fallback.
 - `npm run verify` — a fast headless render probe (WebGL context, non-blank frame, no console errors).
 
 ## Architecture
@@ -116,10 +117,13 @@ src/
     Input.js      Keyboard/mouse state with edge-triggered actions
     Audio.js      Web Audio synthesis and dynamic ambience
     Save.js       Versioned LocalStorage persistence
-    math.js       Collision/vector helpers
+    math.js       Collision/vector helpers, fixed-timestep accumulator
+    rng.js        Seedable PRNG (mulberry32); the shared simulation stream
+    SpatialHash.js Uniform-grid index for collision and line-of-sight queries
+    NavGrid.js    Uniform nav grid + deterministic A* pathing for enemies
   entities/
     Player.js     Movement, weapons, dash, reload, damage, procedural character art
-    Enemy.js      Enemy archetypes, perception and state-machine behavior
+    Enemy.js      Enemy archetypes, perception, state machine, path following
     Boss.js       Multi-phase boss behavior and procedural boss art
   combat/
     weapons.js    Data-driven weapon definitions and runtime weapon creation
@@ -131,7 +135,9 @@ src/
     Renderer.js   Three.js renderer, layer quads, EffectComposer, fallback probe
     shaders.js    GLSL for the lighting and CRT/VHS passes
     mood.js       Per-zone neon palettes and beat-pulse colour helper
-    humanoid.js   Shared Hotline Miami-style humanoid sprite/animation renderer
+    character.js  Shared articulated HM2-style character renderer (upright views)
+    humanoid.js   rrect/shade/tint drawing helpers
+    LightBuffer.js Reusable, allocation-free light list for the lighting pass
     weapons-art.js Per-weapon procedural silhouettes (held, thrown, floor, HUD)
   data/
     missions.js   The five mission definitions (floors, rosters, objectives, moods)
