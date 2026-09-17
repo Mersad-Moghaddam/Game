@@ -113,13 +113,25 @@ export class Game{
  hitStop(sec){this.freeze=Math.max(this.freeze||0,sec)}
    onPlayerDeath(){this.deaths++;this.fx.blood(this.player.x,this.player.y,28,this.player.a);this.fx.gib(this.player.x,this.player.y,this.player.a,14);this.fx.limb(this.player.x,this.player.y,this.player.a,'arm');this.audio.setIntensity(.05);this.shake(14);this.hitStop(.05);this.renderer?.glitch?.(1)}
  finishCampaign(){const acc=this.shots?this.hits/this.shots:1;let value=this.score+this.maxCombo*90+acc*700-this.deaths*450;let rank='D';if(value>3000)rank='C';if(value>4800)rank='B';if(value>6500)rank='A';if(value>8200)rank='S';if(value>10000)rank='S+';const unlocks=[];this.results={score:Math.round(this.score),time:this.campaignTime,accuracy:Math.round(acc*100),combo:this.maxCombo,deaths:this.deaths,variety:this.weaponKinds.size,stealth:this.stealthKills,rank,value:Math.round(value),unlocks,missions:this.missionsCleared};this.save.runs++;if(!this.save.unlockedMasks.includes('RAM-7')){this.save.unlockedMasks.push('RAM-7');unlocks.push('RAM-7')}if(['A','S','S+'].includes(rank)&&!this.save.unlockedMasks.includes('FOX-2')){this.save.unlockedMasks.push('FOX-2');unlocks.push('FOX-2')}if(this.maxCombo>=6&&!this.save.unlockedMasks.includes('RAVEN-3')){this.save.unlockedMasks.push('RAVEN-3');unlocks.push('RAVEN-3')}if(value>this.save.highScore){this.save.highScore=Math.round(value);this.save.bestRank=rank}storeSave(this.save);this.state='results';this.audio.setIntensity(.08)}
- render(){if(this.renderer&&this.renderer.available)return this.renderGL();return this.renderCanvas();}
-  renderCanvas(){const out=this.ctx;out.setTransform(1,0,0,1,0,0);out.fillStyle='#05060a';out.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);if(this.state==='menu'){this.drawMenu(out);return}if(this.state==='settings'){this.drawSettings(out);return}if(this.state==='credits'){this.drawCredits(out);return}if(this.state==='results'){this.drawResults(out);return}if(!this.level){return}
-    let c=out;
-    if(this.settings.pixel!==false&&PIXEL>1){if(!this.pixCanvas){this.pixCanvas=document.createElement('canvas');this.pixCanvas.width=VIEW_W;this.pixCanvas.height=VIEW_H;this.pixCtx=this.pixCanvas.getContext('2d');this.pixCtx.imageSmoothingEnabled=false}c=this.pixCtx;c.setTransform(1/PIXEL,0,0,1/PIXEL,0,0)}
-    c.fillStyle='#05060a';c.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
-        this.ensureWorld();c.drawImage(this.worldCanvas,this.cam.x-this.shakeX,this.cam.y-this.shakeY,VIRTUAL_W,VIRTUAL_H,0,0,VIRTUAL_W,VIRTUAL_H);
-     c.save();c.translate(-this.cam.x+this.shakeX,-this.cam.y+this.shakeY);this.level.drawItems(c);for(const b of this.projectiles){c.strokeStyle=b.color;c.lineWidth=2;c.beginPath();c.moveTo(b.px,b.py);c.lineTo(b.x,b.y);c.stroke()}for(const t of this.thrown){c.save();c.translate(t.x,t.y);c.rotate(t.a);drawWeaponArt(c,t.weapon,0.9);c.restore()}for(const h of this.hazards){c.save();c.translate(h.x,h.y);c.rotate(h.a||0);c.fillStyle='#8f6c4e';c.fillRect(-9,-7,18,14);c.restore()}for(const e of this.enemies)e.draw(c,this.debug);if(this.boss)this.boss.draw(c);this.fx.draw(c);if(!this.player.dead)this.player.draw(c);c.restore();
+  // Single source of truth for the simulated scene, shared by the WebGL and
+  // Canvas fallback paths (which previously duplicated this list).
+  drawActors(c){
+    this.level.drawItems(c);
+    for(const b of this.projectiles){c.strokeStyle=b.color;c.lineWidth=2;c.beginPath();c.moveTo(b.px,b.py);c.lineTo(b.x,b.y);c.stroke()}
+    for(const t of this.thrown){c.save();c.translate(t.x,t.y);c.rotate(t.a);drawWeaponArt(c,t.weapon,0.9);c.restore()}
+    for(const h of this.hazards){c.save();c.translate(h.x,h.y);c.rotate(h.a||0);c.fillStyle='#8f6c4e';c.fillRect(-9,-7,18,14);c.restore()}
+    for(const e of this.enemies)e.draw(c,this.debug);
+    if(this.boss)this.boss.draw(c);
+    this.fx.draw(c);
+    if(!this.player.dead)this.player.draw(c);
+  }
+  render(){if(this.renderer&&this.renderer.available)return this.renderGL();return this.renderCanvas();}
+   renderCanvas(){const out=this.ctx;out.setTransform(1,0,0,1,0,0);out.fillStyle='#05060a';out.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);if(this.state==='menu'){this.drawMenu(out);return}if(this.state==='settings'){this.drawSettings(out);return}if(this.state==='credits'){this.drawCredits(out);return}if(this.state==='results'){this.drawResults(out);return}if(!this.level){return}
+     let c=out;
+     if(this.settings.pixel!==false&&PIXEL>1){if(!this.pixCanvas){this.pixCanvas=document.createElement('canvas');this.pixCanvas.width=VIEW_W;this.pixCanvas.height=VIEW_H;this.pixCtx=this.pixCanvas.getContext('2d');this.pixCtx.imageSmoothingEnabled=false}c=this.pixCtx;c.setTransform(1/PIXEL,0,0,1/PIXEL,0,0)}
+     c.fillStyle='#05060a';c.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+         this.ensureWorld();c.drawImage(this.worldCanvas,this.cam.x-this.shakeX,this.cam.y-this.shakeY,VIRTUAL_W,VIRTUAL_H,0,0,VIRTUAL_W,VIRTUAL_H);
+      c.save();c.translate(-this.cam.x+this.shakeX,-this.cam.y+this.shakeY);this.drawActors(c);c.restore();
      this.drawLighting(c);this.drawHUD(c);if(this.state==='playing')this.drawIntro(c);if(this.state==='interlude')this.drawInterlude(c);if(this.state==='upgrade')this.drawUpgrade(c);if(this.state==='paused')this.drawPause(c);if(this.player.dead)this.drawDeath(c);this.drawPost(c);if(this.debug)this.drawDebug(c);
      if(c!==out){out.setTransform(1,0,0,1,0,0);out.imageSmoothingEnabled=false;out.drawImage(this.pixCanvas,0,0,VIRTUAL_W,VIRTUAL_H)}
    }
@@ -131,11 +143,7 @@ export class Game{
   renderGL(){const ui=this.uiCtx||this.ctx;if(ui){ui.setTransform(1,0,0,1,0,0);ui.clearRect(0,0,VIRTUAL_W,VIRTUAL_H);}const c=this.renderer.albedoCtx,g=this.renderer.emissiveCtx,S=this.settings.pixel!==false?1/PIXEL:1;c.setTransform(S,0,0,S,0,0);c.imageSmoothingEnabled=false;c.fillStyle=COLORS.void;c.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);    g.setTransform(S,0,0,S,0,0);g.imageSmoothingEnabled=false;g.fillStyle='#000000';g.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
     if(this.state==='menu'||this.state==='settings'||this.state==='credits'||this.state==='results')this.renderer.setLights({lights:[],ambient:1,pulse:this.beatPulse()});
     if(this.state==='menu'){this.drawMenuWorld(c);this.renderer.render();this.drawMenuUI();return}if(this.state==='settings'){this.drawMenuWorld(c);this.renderer.render();this.drawSettings(ui);return}if(this.state==='credits'){this.drawMenuWorld(c);this.renderer.render();this.drawCredits(ui);return}if(this.state==='results'){this.drawResultsWorld(c);this.renderer.render();this.drawResults(ui);return}if(!this.level){this.renderer.render();return}
-    this.ensureWorld();const ox=-this.cam.x+this.shakeX,oy=-this.cam.y+this.shakeY;c.drawImage(this.worldCanvas,this.cam.x-this.shakeX,this.cam.y-this.shakeY,VIRTUAL_W,VIRTUAL_H,0,0,VIRTUAL_W,VIRTUAL_H);c.save();c.translate(ox,oy);this.level.drawItems(c);
-    for(const b of this.projectiles){c.strokeStyle=b.color;c.lineWidth=2;c.beginPath();c.moveTo(b.px,b.py);c.lineTo(b.x,b.y);c.stroke()}
-    for(const t of this.thrown){c.save();c.translate(t.x,t.y);c.rotate(t.a);drawWeaponArt(c,t.weapon,0.9);c.restore()}
-    for(const h of this.hazards){c.save();c.translate(h.x,h.y);c.rotate(h.a||0);c.fillStyle='#8f6c4e';c.fillRect(-9,-7,18,14);c.restore()}
-    for(const e of this.enemies)e.draw(c,this.debug);if(this.boss)this.boss.draw(c);this.fx.draw(c);if(!this.player.dead)this.player.draw(c);c.restore();
+    this.ensureWorld();const ox=-this.cam.x+this.shakeX,oy=-this.cam.y+this.shakeY;c.drawImage(this.worldCanvas,this.cam.x-this.shakeX,this.cam.y-this.shakeY,VIRTUAL_W,VIRTUAL_H,0,0,VIRTUAL_W,VIRTUAL_H);c.save();c.translate(ox,oy);this.drawActors(c);c.restore();
     g.save();g.globalCompositeOperation='lighter';g.translate(ox,oy);
     for(const b of this.projectiles){g.strokeStyle=b.color;g.lineWidth=3;g.globalAlpha=.45;g.beginPath();g.moveTo(b.px,b.py);g.lineTo(b.x,b.y);g.stroke()}g.globalAlpha=1;
     for(const p of this.level.pickups){if(p.taken)continue;g.globalAlpha=.5;g.fillStyle=p.weapon.color;g.beginPath();g.arc(p.x,p.y,10,0,Math.PI*2);g.fill()}g.globalAlpha=1;
