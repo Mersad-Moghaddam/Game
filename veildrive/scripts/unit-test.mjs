@@ -4,6 +4,7 @@ import { Rng, mulberry32 } from '../src/core/rng.js';
 import { SpatialHash } from '../src/core/SpatialHash.js';
 import { LightBuffer } from '../src/render/LightBuffer.js';
 import { NavGrid } from '../src/core/NavGrid.js';
+import { obtain, compact } from '../src/core/Pool.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
@@ -589,6 +590,20 @@ test('nav: enemies, exit and objective are reachable from spawn on every mission
       assert(p && p.length, `${m.id}: no path to ${t.x},${t.y}`);
     }
   }
+});
+test('pool: obtain reuses freed objects and compact recycles the dead', () => {
+  const free = [];
+  const a = obtain(free, () => ({ v: 0 }));
+  a.v = 5;
+  free.push(a);
+  const b = obtain(free, () => ({ v: -1 }));
+  assert.equal(b, a, 'the freed object is reused');
+  assert.equal(b.v, 5, 'fields are still settable after reuse');
+  const arr = [{ life: 1 }, { life: 0 }, { life: 1 }, { life: 0 }];
+  compact(arr, o => o.life > 0, free);
+  assert.equal(arr.length, 2);
+  assert(arr.every(o => o.life > 0), 'only live objects remain');
+  assert(free.length >= 2, 'dead objects are recycled');
 });
 test('fx: transient arrays stay bounded under sustained heavy use', () => {
   const fx = new FX();

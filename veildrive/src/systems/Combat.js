@@ -3,6 +3,7 @@
 import { COLORS } from '../data/config.js';
 import { dist, angleDiff, pointSegDist, rand } from '../core/math.js';
 import { rng } from '../core/rng.js';
+import { obtain, compact } from '../core/Pool.js';
 import { makeWeapon } from '../combat/weapons.js';
 
 export const CombatSystem = {
@@ -14,7 +15,12 @@ export const CombatSystem = {
     for (let n = 0; n < count; n++) {
       const aa = a + rand(-spread, spread);
       const speed = w.id === 'shotgun' ? 780 : 980;
-      this.projectiles.push({ x: shooter.x + Math.cos(aa) * 22, y: shooter.y + Math.sin(aa) * 22, px: shooter.x, py: shooter.y, vx: Math.cos(aa) * speed, vy: Math.sin(aa) * speed, damage: enemy ? w.damage : w.damage * (this.player.damageMul || 1), owner: enemy ? 'enemy' : 'player', life: (w.range || 800) / speed, color: enemy ? '#ee8d55' : '#f4cf7a', ricochet: !enemy && this.player.ricochet ? 1 : 0, pierce: enemy ? 0 : ((this.player.pierce || 0) + (w.pen || 0)), hitSet: enemy ? null : [] });
+      const b = obtain(this._projFree, () => ({ x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, damage: 0, owner: 'player', life: 0, color: '#fff', ricochet: 0, pierce: 0, hitSet: null }));
+      b.x = shooter.x + Math.cos(aa) * 22; b.y = shooter.y + Math.sin(aa) * 22; b.px = shooter.x; b.py = shooter.y; b.vx = Math.cos(aa) * speed; b.vy = Math.sin(aa) * speed;
+      b.damage = enemy ? w.damage : w.damage * (this.player.damageMul || 1); b.owner = enemy ? 'enemy' : 'player'; b.life = (w.range || 800) / speed; b.color = enemy ? '#ee8d55' : '#f4cf7a';
+      b.ricochet = !enemy && this.player.ricochet ? 1 : 0; b.pierce = enemy ? 0 : ((this.player.pierce || 0) + (w.pen || 0));
+      if (enemy) b.hitSet = null; else { b.hitSet = b.hitSet || []; b.hitSet.length = 0; }
+      this.projectiles.push(b);
     }
     const fs = w.flash || 1, sx = shooter.x + Math.cos(a) * 25, sy = shooter.y + Math.sin(a) * 25;
     this.fx.flash(sx, sy, (w.id === 'shotgun' ? 95 : 55) * fs, '#ffd28c', .07);
@@ -111,7 +117,7 @@ export const CombatSystem = {
         b.life = 0;
       }
     }
-    this.projectiles = this.projectiles.filter(b => b.life > 0);
+    compact(this.projectiles, b => b.life > 0, this._projFree);
   },
   onEnemyKilled(e, angle, overkill = 1) {
     this.killCount++; const wasStealth = e.state !== 'COMBAT'; if (wasStealth) this.stealthKills++;
