@@ -33,18 +33,33 @@ export class Enemy{
  // Walk cycle is driven by actual displacement, so idle enemies do not
  // fidget or walk in place.
   stepAnim(sx,sy){const moved=Math.hypot(this.x-sx,this.y-sy);this.animT=(this.animT||0)+moved*0.16;this._moving=moved>0.05;}
- moveToward(t,dt,g,m=1){
-   let n=norm(t.x-this.x,t.y-this.y);const probe=26;
-   if(this.avoidT>0)this.avoidT-=dt;
-   if(g.level.blocked(this.x+n.x*probe,this.y+n.y*probe,this.r)){
-     const base=Math.atan2(n.y,n.x);let best=null;
-     // Reuse the last avoidance side for a moment so steering does not jitter.
-     if(this.avoidDir!==null&&this.avoidT>0){const a=base+this.avoidDir,v={x:Math.cos(a),y:Math.sin(a)};if(!g.level.blocked(this.x+v.x*probe,this.y+v.y*probe,this.r))best={v,off:this.avoidDir};}
-     if(!best){const offsets=[.55,-.55,1.05,-1.05,1.55,-1.55];let bs=1e9;for(const off of offsets){const a=base+off,v={x:Math.cos(a),y:Math.sin(a)};if(g.level.blocked(this.x+v.x*probe,this.y+v.y*probe,this.r))continue;const nx=this.x+v.x*probe,ny=this.y+v.y*probe,score=Math.hypot(t.x-nx,t.y-ny)+Math.abs(off)*12;if(score<bs){bs=score;best={v,off};}}if(best){this.avoidDir=best.off;this.avoidT=.4;}}
-     if(best)n=best.v;
-   }else this.avoidT=0;
-   this.a=Math.atan2(n.y,n.x);g.level.moveCircle(this,n.x*this.speed*m*dt,n.y*this.speed*m*dt,this.r);
- }
+  moveToward(t,dt,g,m=1){
+    const probe=26;
+    if(this.avoidT>0)this.avoidT-=dt;
+    this._pathT=(this._pathT||0)-dt;
+    const d0=norm(t.x-this.x,t.y-this.y);
+    let n=d0;
+    const clear=!g.level.blocked(this.x+d0.x*probe,this.y+d0.y*probe,this.r);
+    if(clear){this._path=null;}
+    else if(g.nav){
+      // Direct route is blocked: follow a throttled A* path through openings.
+      if(!this._path||this._pathT<=0){this._path=g.nav.path(this.x,this.y,t.x,t.y);this._pathI=1;this._pathT=.45;}
+      if(this._path&&this._path.length){
+        while(this._pathI<this._path.length&&dist(this,this._path[this._pathI])<g.nav.cell*.75)this._pathI++;
+        const wp=this._path[Math.min(this._pathI,this._path.length-1)];
+        if(wp)n=norm(wp.x-this.x,wp.y-this.y);
+        if(this._pathI>=this._path.length)this._path=null;
+      }
+    }
+    // Local steering is the fallback when no path is available.
+    if(!clear&&!this._path&&g.level.blocked(this.x+n.x*probe,this.y+n.y*probe,this.r)){
+      const base=Math.atan2(n.y,n.x);let best=null;
+      if(this.avoidDir!==null&&this.avoidT>0){const a=base+this.avoidDir,v={x:Math.cos(a),y:Math.sin(a)};if(!g.level.blocked(this.x+v.x*probe,this.y+v.y*probe,this.r))best={v,off:this.avoidDir};}
+      if(!best){const offsets=[.55,-.55,1.05,-1.05,1.55,-1.55];let bs=1e9;for(const off of offsets){const a=base+off,v={x:Math.cos(a),y:Math.sin(a)};if(g.level.blocked(this.x+v.x*probe,this.y+v.y*probe,this.r))continue;const nx=this.x+v.x*probe,ny=this.y+v.y*probe,score=Math.hypot(t.x-nx,t.y-ny)+Math.abs(off)*12;if(score<bs){bs=score;best={v,off};}}if(best){this.avoidDir=best.off;this.avoidT=.4;}}
+      if(best)n=best.v;
+    }else if(clear)this.avoidT=0;
+    this.a=Math.atan2(n.y,n.x);g.level.moveCircle(this,n.x*this.speed*m*dt,n.y*this.speed*m*dt,this.r);
+  }
  combat(dt,g,p){
    const w=this.weapon,d=dist(this,p),to=Math.atan2(p.y-this.y,p.x-this.x);this.lastKnown={x:p.x,y:p.y};this.alertT=4;const los=!g.level.lineBlocked(this,p);
    // Accurate types lead the player's movement.

@@ -64,6 +64,9 @@ export class Level{
     return { x, y };
   }
   blocked(x,y,r=12){if(x-r<0||y-r<0||x+r>this.w||y+r>this.h)return true;this._ensureHashes();const c=this._hash.query(x,y,r);for(let i=0;i<c.length;i++)if(circleRect(x,y,r,c[i]))return true;return false;}
+  // Navigation-only collision: walls and closed doors. Destructible props are
+  // ignored so pathfinding does not treat a barrel it can shoot as permanent.
+  staticBlocked(x,y,r=12){if(x-r<0||y-r<0||x+r>this.w||y+r>this.h)return true;for(const o of this.walls)if(circleRect(x,y,r,o))return true;for(const d of this.doors)if(!d.open&&!d.broken&&circleRect(x,y,r,d))return true;return false;}
   moveCircle(e,dx,dy,r=e.r||12){let nx=e.x+dx;if(!this.blocked(nx,e.y,r))e.x=nx;let ny=e.y+dy;if(!this.blocked(e.x,ny,r))e.y=ny;}
   lineBlocked(a,b){this._ensureHashes();const c=this._hash.queryRect(a.x,a.y,b.x,b.y);for(let i=0;i<c.length;i++)if(segRect(a.x,a.y,b.x,b.y,c[i]))return true;return false;}
   bulletHit(x1,y1,x2,y2){

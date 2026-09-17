@@ -3,6 +3,7 @@ import { clamp, lerp, dist, norm, angleDiff, pointSegDist, circleRect, segRect, 
 import { Rng, mulberry32 } from '../src/core/rng.js';
 import { SpatialHash } from '../src/core/SpatialHash.js';
 import { LightBuffer } from '../src/render/LightBuffer.js';
+import { NavGrid } from '../src/core/NavGrid.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
@@ -563,6 +564,31 @@ test('art: weapon silhouettes are distinct per type', () => {
     const ctx = recordingCtx(); drawWeaponArt(ctx, makeWeapon(id), 1); counts.add(ctx.calls.length);
   }
   assert(counts.size >= 5, `weapons should not share silhouettes (distinct call counts: ${counts.size})`);
+});
+test('nav: A* routes around a wall to reach the far side', () => {
+  const def = {
+    id: 't', name: 'T', sub: 'x', entryLabel: 'X', entryKind: 'door', mood: 'violet', w: 400, h: 200,
+    spawn: { x: 40, y: 100 }, exit: { x: 40, y: 100 }, goal: { type: 'eliminate' },
+    walls: [{ x: 190, y: 0, w: 20, h: 150 }], doors: [], props: [], lights: [], pickups: [], enemies: []
+  };
+  const L = new Level(def), nav = new NavGrid(L, 20);
+  assert(L.blocked(200, 80, 12), 'the wall blocks the direct line');
+  const p = nav.path(100, 80, 300, 80);
+  assert(p && p.length > 2, `path should route around the wall (got ${p && p.length})`);
+});
+test('nav: enemies, exit and objective are reachable from spawn on every mission (doors open)', () => {
+  for (const m of MISSIONS) {
+    const L = new Level(m);
+    for (const d of L.doors) L.openDoor(d);
+    const nav = new NavGrid(L);
+    const targets = [...(m.enemies || []).map(e => ({ x: e.x, y: e.y })), m.exit];
+    if (m.goal && m.goal.x != null) targets.push({ x: m.goal.x, y: m.goal.y });
+    if (m.boss) targets.push({ x: m.boss.x, y: m.boss.y });
+    for (const t of targets) {
+      const p = nav.path(m.spawn.x, m.spawn.y, t.x, t.y);
+      assert(p && p.length, `${m.id}: no path to ${t.x},${t.y}`);
+    }
+  }
 });
 test('fx: transient arrays stay bounded under sustained heavy use', () => {
   const fx = new FX();

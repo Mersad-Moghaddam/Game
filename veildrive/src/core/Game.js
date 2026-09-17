@@ -3,6 +3,7 @@ import { Input } from './Input.js';
 import { AudioSystem } from './Audio.js';
 import { loadSave,storeSave } from './Save.js';
 import { Level } from '../world/Level.js';
+import { NavGrid } from './NavGrid.js';
 import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Boss } from '../entities/Boss.js';
@@ -29,7 +30,7 @@ export class Game{
  applyDomSettings(){const s=document.getElementById('scanlines');if(!s)return;const glPost=!!(this.renderer&&this.renderer.available)&&this.settings.post;s.style.display=glPost?'none':(this.settings.post?'block':'none');}
  startRun(){this.unlockAudio();rng.reseed(this.runSeed!=null?this.runSeed:(Date.now()>>>0));this.missionIndex=0;this.deaths=0;this.campaignTime=0;this.score=0;this.combo=0;this.comboT=0;this.maxCombo=0;this.shots=0;this.hits=0;this.stealthKills=0;this.killCount=0;this.weaponKinds=new Set();this.results=null;this.upgradeShown=false;this.upgradeChoices=[];this.activeUpgrades=[];this.missionsCleared=0;this.startMission(0,true);}
  startMission(i,fresh=false,respawn=false){
-   const def=MISSIONS[i];this.missionIndex=i;this.mission=def;this.level=new Level(def);
+    const def=MISSIONS[i];this.missionIndex=i;this.mission=def;this.level=new Level(def);this.nav=new NavGrid(this.level);
    const sp=this.level.findOpen(def.spawn.x,def.spawn.y,14);
    if(fresh||!this.player){this.player=new Player(sp.x,sp.y);this.applyMask();}
    else{this.player.x=sp.x;this.player.y=sp.y;this.player.dead=false;this.player.hp=respawn?this.player.maxHp:Math.min(this.player.maxHp,this.player.hp+1);}
@@ -135,7 +136,7 @@ export class Game{
      this.drawLighting(c);this.drawHUD(c);if(this.state==='playing')this.drawIntro(c);if(this.state==='interlude')this.drawInterlude(c);if(this.state==='upgrade')this.drawUpgrade(c);if(this.state==='paused')this.drawPause(c);if(this.player.dead)this.drawDeath(c);this.drawPost(c);if(this.debug)this.drawDebug(c);
      if(c!==out){out.setTransform(1,0,0,1,0,0);out.imageSmoothingEnabled=false;out.drawImage(this.pixCanvas,0,0,VIRTUAL_W,VIRTUAL_H)}
    }
-  ensureWorld(){if(!this.worldCanvas){this.worldCanvas=document.createElement('canvas');this.worldCanvas.width=this.level.w;this.worldCanvas.height=this.level.h;this.worldCtx=this.worldCanvas.getContext('2d');this.worldCtx.imageSmoothingEnabled=false;this.level.markDirty();}if(this.level.dirty){this.rebakeWorld();this.level.dirty=false;}this.drainDecalsAndCorpses();}
+  ensureWorld(){if(!this.worldCanvas){this.worldCanvas=document.createElement('canvas');this.worldCanvas.width=this.level.w;this.worldCanvas.height=this.level.h;this.worldCtx=this.worldCanvas.getContext('2d');this.worldCtx.imageSmoothingEnabled=false;this.level.markDirty();}if(this.level.dirty){this.rebakeWorld();this.level.dirty=false;if(this.nav)this.nav=new NavGrid(this.level);}this.drainDecalsAndCorpses();}
   rebakeWorld(){this.level.bake(this.worldCtx);for(const d of this.fx.decals)this.level.paintDecal(this.worldCtx,d);for(const c of this.fx.corpses)this.level.paintCorpse(this.worldCtx,c);this.fx.markAllPainted();}
   drainDecalsAndCorpses(){for(const d of this.fx.decals){if(d.painted)continue;this.level.paintDecal(this.worldCtx,d);d.painted=true;}for(const c of this.fx.corpses){if(c.painted)continue;this.level.paintCorpse(this.worldCtx,c);c.painted=true;}}
   beatPulse(){return this.settings.music>0?(this.audio.pulse||0)*Math.min(1,(this.audio.intensity||0)+.35):0}
