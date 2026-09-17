@@ -125,6 +125,38 @@ try {
   });
   ok('characters: figures stay upright facing either way', upright.skipped || (upright.right.top > upright.right.bot && upright.left.top > upright.left.bot), JSON.stringify(upright));
 
+  // --- pacing: readable movement, dash still bursts, kills stay brutal ---
+  const pacing = await page.evaluate(() => {
+    const g = window.__VEILDRIVE__;
+    g.setSeed(11); g.startRun(); g.invincible = true;
+    const step = n => { for (let i = 0; i < n; i++) g.step(1 / 60); };
+    const p = g.player, x0 = p.x;
+    // walk straight right for 18 fixed ticks (0.3s) in the empty entry room
+    g.input.keys.add('KeyD'); step(18);
+    const walk = (p.x - x0) / (18 / 60);
+    g.input.keys.delete('KeyD');
+    // one dash tick, right after a plain idle tick
+    p.x = x0; p.dashCd = 0; step(1);
+    const bx = p.x; g.input.keys.add('KeyD'); g.input.pressed.add('ShiftLeft'); step(1);
+    const dashStep = p.x - bx;
+    g.input.keys.delete('KeyD'); g.input.pressed.clear();
+    const speeds = g.enemies.map(e => e.speed);
+    const guard = g.enemies.find(e => e.type === 'guard');
+    const elite = g.enemies.find(e => e.type === 'elite');
+    let brutal = null;
+    if (guard && elite) {
+      guard.damage(1, g, 0); elite.damage(1, g, 0);
+      const eliteAfter1 = !elite.dead; elite.damage(1, g, 0);
+      brutal = { guard: guard.dead, eliteAfter1, eliteAfter2: elite.dead };
+    }
+    g.input.keys.clear(); g.input.pressed.clear(); g.runSeed = null; g.state = 'menu';
+    return { walk: Math.round(walk), dashStep, walkStep: walk / 60, maxSpeed: Math.max(...speeds), minSpeed: Math.min(...speeds), brutal };
+  });
+  ok('pacing: player walk speed is in the readable band', pacing.walk >= 180 && pacing.walk <= 215, `walk ${pacing.walk}`);
+  ok('pacing: enemies stay within the readable speed band', pacing.maxSpeed <= 130 && pacing.minSpeed >= 80, `speed ${pacing.minSpeed}..${pacing.maxSpeed}`);
+  ok('pacing: dash still bursts faster than a walk', pacing.dashStep > pacing.walkStep * 1.5, `dash ${pacing.dashStep.toFixed(2)} vs walk ${pacing.walkStep.toFixed(2)}`);
+  ok('pacing: kills stay brutal (guard one hit, elite two)', !!pacing.brutal && pacing.brutal.guard && pacing.brutal.eliteAfter1 && pacing.brutal.eliteAfter2, JSON.stringify(pacing.brutal));
+
   // --- menu: masks, settings, credits ---
   await evalG(() => { const g = window.__VEILDRIVE__; g.save.unlockedMasks = ['MOTH-0', 'RAM-7']; g.save.selectedMask = 'MOTH-0'; });
   await evalG(() => { window.__VEILDRIVE__.menuIndex = 1; });

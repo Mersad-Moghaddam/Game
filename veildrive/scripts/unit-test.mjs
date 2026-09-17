@@ -270,6 +270,12 @@ test('spatial: level blocked matches brute force on every mission', () => {
     }
   }
 });
+test('tuning: movement speeds match the baseline pace', () => {
+  const p = new Player(0, 0);
+  assert.equal(p.moveSpeed, 270, `player walk ${p.moveSpeed}`);
+  const expected = { guard: 120, brawler: 155, shotgunner: 112, hunter: 145, elite: 160 };
+  for (const [t, s] of Object.entries(expected)) assert.equal(new Enemy(0, 0, t, []).speed, s, `${t} speed`);
+});
 test('level: breaking a prop removes it from blockers and marks dirty', () => {
   const L = new Level(MISSIONS[0]);
   const p = L.props.find(o => o.solid && o.hp);
