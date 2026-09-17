@@ -1,4 +1,4 @@
-import { circleRect, segRect, dist } from '../core/math.js';
+import { circleRect, segRect, segRectEntry, dist } from '../core/math.js';
 import { makeWeapon } from '../combat/weapons.js';
 import { COLORS } from '../data/config.js';
 import { moodColor } from '../render/mood.js';
@@ -16,7 +16,7 @@ export class Level{
     this.def = def;
     this.w = def.w; this.h = def.h;
     this.mood = def.mood || 'violet';
-    this.walls = []; this.doors = []; this.props = []; this.pickups = []; this.lights = []; this.zones = [];
+    this.walls = []; this.doors = []; this.props = []; this.pickups = []; this.lights = [];
     this.goal = def.goal || { type: 'eliminate' };
     this.exit = { x: def.exit.x, y: def.exit.y, active: false };
     this.objective = null;
@@ -26,7 +26,6 @@ export class Level{
     for(const p of def.props) this.props.push({ x: p.x, y: p.y, w: p.w, h: p.h, type: p.type, solid: p.solid !== false, hp: p.hp || 2, broken: false });
     for(const l of def.lights) this.lights.push({ x: l.x, y: l.y, r: l.r, mood: this.mood });
     for(const p of def.pickups) this.pickups.push({ x: p.x, y: p.y, weapon: makeWeapon(p.weapon) });
-    this.zones = [{ x: 0, y: 0, w: this.w, h: this.h, type: 'interior', mood: this.mood }];
     if(this.goal.type === 'retrieve') this.objective = { x: this.goal.x, y: this.goal.y, taken: false, label: this.goal.label || 'OBJECTIVE' };
   }
   markDirty(){ this.dirty = true; this._blockersDirty = true; }
@@ -58,7 +57,14 @@ export class Level{
   blocked(x,y,r=12){if(x-r<0||y-r<0||x+r>this.w||y+r>this.h)return true;return this.blockers().some(o=>circleRect(x,y,r,o));}
   moveCircle(e,dx,dy,r=e.r||12){let nx=e.x+dx;if(!this.blocked(nx,e.y,r))e.x=nx;let ny=e.y+dy;if(!this.blocked(e.x,ny,r))e.y=ny;}
   lineBlocked(a,b){return this.blockers().some(o=>segRect(a.x,a.y,b.x,b.y,o));}
-  bulletHit(x1,y1,x2,y2){const blockers=[...this.blockers(),...this.props.filter(p=>p.type==='glass'&&!p.broken)];for(const o of blockers){if(segRect(x1,y1,x2,y2,o))return o}return null;}
+  bulletHit(x1,y1,x2,y2){
+    // Return the NEAREST intersected blocker/prop, not the first in array
+    // order: otherwise a bullet could damage a prop behind a nearer one.
+    let best=null,bt=Infinity;
+    for(const o of this.blockers()){const t=segRectEntry(x1,y1,x2,y2,o);if(t!==null&&t<bt){bt=t;best=o}}
+    for(const p of this.props){if(p.type==='glass'&&!p.broken){const t=segRectEntry(x1,y1,x2,y2,p);if(t!==null&&t<bt){bt=t;best=p}}}
+    return best;
+  }
   nearestDoor(p,max=64){let best=null,bd=max;for(const d of this.doors){if(d.broken||d.open)continue;const c={x:d.x+d.w/2,y:d.y+d.h/2},dd=dist(p,c);if(dd<bd){best=d;bd=dd}}return best;}
   openDoor(d,kick=false){if(!d)return;d.open=true;if(kick)d.broken=true;this.markDirty();}
   damageProp(o,dmg=1){if(!o||!('hp'in o)||o.broken)return false;o.hp-=dmg;if(o.hp<=0){o.broken=true;o.solid=false;this.markDirty();return true}return false;}

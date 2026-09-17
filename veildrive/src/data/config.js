@@ -8,9 +8,9 @@ export const VIEW_W = VIRTUAL_W / PIXEL;
 export const VIEW_H = VIRTUAL_H / PIXEL;
 export const SAVE_KEY = 'veildrive-save-v1';
 export const COLORS = {
-  void:'#0b0416', ground:'#1a0a33', ground2:'#2a1055', wall:'#3d1263', wallHi:'#8a35d6',
+  void:'#0b0416', wall:'#3d1263',
   hotPink:'#ff2e88', magenta:'#ff1e9c', cyan:'#12e0ff', blue:'#2e5bff', violet:'#8b2bff',
-  orange:'#ff7a1a', lime:'#c6ff2e', bone:'#f6f2e6', ink:'#120620', blood:'#ff0a3c', bloodDark:'#7a0018'
+  orange:'#ff7a1a', bone:'#f6f2e6', ink:'#120620', blood:'#ff0a3c', bloodDark:'#7a0018'
 };
 export const MASKS = [
   {id:'MOTH-0',name:'MOTH-0',desc:'Longer chain window. The original signal mask.'},

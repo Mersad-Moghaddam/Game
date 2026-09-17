@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { clamp, lerp, dist, norm, angleDiff, pointSegDist, circleRect, segRect, advance } from '../src/core/math.js';
+import { clamp, lerp, dist, norm, angleDiff, pointSegDist, circleRect, segRect, segRectEntry, advance } from '../src/core/math.js';
 import { Rng, mulberry32 } from '../src/core/rng.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
@@ -40,6 +40,12 @@ test('math: segRect detects a thin wall between samples', () => {
 });
 test('math: segRect clear when no intersection', () => {
   assert.equal(segRect(0, 0, 100, 0, { x: 0, y: 50, w: 100, h: 10 }), false);
+});
+test('math: segRectEntry returns the nearest entry parameter', () => {
+  const near = { x: 80, y: 80, w: 12, h: 24 }, far = { x: 180, y: 80, w: 24, h: 24 };
+  const tn = segRectEntry(0, 92, 400, 92, near), tf = segRectEntry(0, 92, 400, 92, far);
+  assert(tn !== null && tf !== null && tn < tf, 'near object must have the smaller entry t');
+  assert.equal(segRectEntry(0, 0, 10, 0, { x: 50, y: 50, w: 10, h: 10 }), null);
 });
 
 // ------------------------------------------------------------------ rng
@@ -84,7 +90,7 @@ test('weapons: makeWeapon ammo + reserve (x2) and melee nulls', () => {
 
 // --------------------------------------------------------------- config
 test('config: palette has every required key', () => {
-  for (const key of ['void', 'ground', 'ground2', 'wall', 'wallHi', 'hotPink', 'magenta', 'cyan', 'blue', 'violet', 'orange', 'lime', 'bone', 'ink', 'blood', 'bloodDark']) {
+  for (const key of ['void', 'wall', 'hotPink', 'magenta', 'cyan', 'blue', 'violet', 'orange', 'bone', 'ink', 'blood', 'bloodDark']) {
     assert(/^#[0-9a-f]{6}$/i.test(COLORS[key]), `palette key ${key}`);
   }
 });
@@ -233,6 +239,18 @@ test('level: breaking a prop removes it from blockers and marks dirty', () => {
   assert.equal(L.damageProp(p, p.hp), true);
   assert.equal(p.broken, true); assert.equal(p.solid, false); assert.equal(L.dirty, true);
   assert(!L.blockers().includes(p));
+});
+test('level: bulletHit picks the nearest prop, not array order', () => {
+  const def = {
+    id: 't', name: 'T', sub: 'x', entryLabel: 'X', entryKind: 'door', mood: 'violet', w: 400, h: 200,
+    spawn: { x: 20, y: 20 }, exit: { x: 20, y: 20 }, goal: { type: 'eliminate' },
+    walls: [], doors: [], lights: [], pickups: [], enemies: [],
+    props: [{ x: 180, y: 80, w: 24, h: 24, type: 'barrel', solid: true, hp: 1 },
+            { x: 80, y: 80, w: 12, h: 24, type: 'glass', solid: false, hp: 1 }]
+  };
+  const L = new Level(def);
+  const hit = L.bulletHit(0, 92, 400, 92);
+  assert.equal(hit.type, 'glass', `nearest prop should win, got ${hit && hit.type}`);
 });
 
 // --------------------------------------------------------------- player
