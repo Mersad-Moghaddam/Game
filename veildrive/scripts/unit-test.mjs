@@ -10,7 +10,7 @@ import { pressure } from '../src/systems/Difficulty.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
-import { MISSIONS, MISSION_COUNT } from '../src/data/missions.js';
+import { MISSIONS, MISSION_COUNT, PHASES, PHASE_COUNT, MISSIONS_PER_PHASE, phaseOfMission, phaseStart } from '../src/data/missions.js';
 import { Level } from '../src/world/Level.js';
 import { FX } from '../src/systems/FX.js';
 import { Player } from '../src/entities/Player.js';
@@ -795,7 +795,7 @@ test('missions: pickups reference real weapons', () => {
 });
 test('missions: goals are valid and self-consistent', () => {
   for (const m of MISSIONS) {
-    assert(['eliminate', 'retrieve', 'target', 'boss'].includes(m.goal.type), `${m.id} goal type`);
+    assert(['eliminate', 'retrieve', 'target', 'boss', 'collect', 'sabotage', 'survive'].includes(m.goal.type), `${m.id} goal type`);
     if (m.goal.type === 'retrieve' || m.goal.type === 'target') assert(m.goal.x != null && m.goal.y != null, `${m.id} goal coords`);
     if (m.goal.type === 'boss') assert(m.boss && m.boss.x != null, `${m.id} boss def`);
     if (m.boss) assert.equal(m.goal.type, 'boss', `${m.id} has a boss but not a boss goal`);
@@ -842,6 +842,60 @@ test('boss: phase is monotonic with damage and never skips', () => {
   const seen = new Set();
   for (let i = 0; i < 40 && !b.dead; i++) { const before = b.phase; b.damage(1, bossG, 0); seen.add(b.phase); assert(b.phase >= before, 'phase went backwards'); }
   assert(seen.has(1) && seen.has(2) && seen.has(3), `phase progression incomplete: ${[...seen]}`);
+});
+
+// --------------------------------------------------------------- phases
+test('phases: three phases of five unique missions', () => {
+  assert.equal(PHASE_COUNT, 3);
+  assert.equal(MISSIONS_PER_PHASE, 5);
+  assert.equal(PHASES.length, 3);
+  for (const p of PHASES) assert.equal(p.missions.length, MISSIONS_PER_PHASE, `${p.id} mission count`);
+  assert.equal(MISSIONS.length, 15);
+  const ids = MISSIONS.map(m => m.id);
+  assert.equal(new Set(ids).size, ids.length, 'duplicate mission ids');
+  for (let i = 0; i < MISSIONS.length; i++) {
+    assert.equal(MISSIONS[i], PHASES[phaseOfMission(i)].missions[i % MISSIONS_PER_PHASE], `phaseOfMission(${i})`);
+    assert.equal(phaseStart(phaseOfMission(i)), Math.floor(i / MISSIONS_PER_PHASE) * MISSIONS_PER_PHASE, `phaseStart(${i})`);
+  }
+  for (const p of PHASES) for (const k of ['reaction', 'detect', 'score']) assert(Number.isFinite(p.difficulty[k]) && p.difficulty[k] > 0, `${p.id}.${k}`);
+});
+test('phases: goals are valid, varied and self-consistent', () => {
+  const types = new Set();
+  for (const m of MISSIONS) {
+    types.add(m.goal.type);
+    assert(['eliminate', 'retrieve', 'target', 'boss', 'collect', 'sabotage', 'survive'].includes(m.goal.type), `${m.id} goal ${m.goal.type}`);
+    if (m.goal.type === 'collect') {
+      assert(Array.isArray(m.goal.items) && m.goal.items.length >= 2, `${m.id} collect items`);
+      for (const it of m.goal.items) assert(Number.isFinite(it.x) && Number.isFinite(it.y) && !!it.label, `${m.id} collect item`);
+    }
+    if (m.goal.type === 'sabotage') {
+      assert(Array.isArray(m.goal.targets) && m.goal.targets.length >= 2, `${m.id} sabotage targets`);
+      for (const t of m.goal.targets) assert(Number.isFinite(t.x) && Number.isFinite(t.y) && !!t.label, `${m.id} sabotage target`);
+    }
+    if (m.goal.type === 'survive') assert(m.goal.duration > 0, `${m.id} survive duration`);
+    if (m.reinforce) {
+      assert.equal(m.goal.type, 'survive', `${m.id} reinforce only on survive`);
+      assert(m.reinforce.every > 0 && m.reinforce.max >= 1, `${m.id} reinforce timing`);
+      assert(m.reinforce.types.length >= 1 && m.reinforce.points.length >= 1, `${m.id} reinforce roster/points`);
+    }
+  }
+  for (const t of ['eliminate', 'retrieve', 'target', 'boss', 'collect', 'sabotage', 'survive']) assert(types.has(t), `goal type ${t} unused`);
+});
+test('phases: new objective and reinforcement positions are open and reachable', () => {
+  const bad = [];
+  for (const m of MISSIONS) {
+    const L = new Level(m);
+    const objs = [...(m.goal.items || []), ...(m.goal.targets || [])];
+    for (const o of objs) {
+      if (L.blocked(o.x, o.y, 14)) bad.push(`${m.id} objective ${o.x},${o.y} blocked`);
+      if (!gridReachable(L, m.spawn, o, 8, 13)) bad.push(`${m.id} objective ${o.x},${o.y} unreachable`);
+    }
+    if (m.reinforce) for (const p of m.reinforce.points) {
+      if (L.blocked(p.x, p.y, 12)) bad.push(`${m.id} reinforce ${p.x},${p.y} blocked`);
+      if (!gridReachable(L, m.spawn, p, 8, 13)) bad.push(`${m.id} reinforce ${p.x},${p.y} unreachable`);
+    }
+  }
+  assert.equal(bad.length, 0, bad.join(' | '));
 });
 
 // --------------------------------------------------------------- report
