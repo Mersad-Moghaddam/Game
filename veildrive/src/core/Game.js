@@ -6,6 +6,7 @@ import { FX } from '../systems/FX.js';
 import { Enemy } from '../entities/Enemy.js';
 import { drawWeaponArt } from '../render/weapons-art.js';
 import { MISSION_COUNT, MISSIONS_PER_PHASE } from '../data/missions.js';
+import { phaseDifficulty, applyPhaseToEnemy } from '../systems/Difficulty.js';
 import { clamp, rand, advance } from './math.js';
 import { rng } from './rng.js';
 import { goalReached } from './goals.js';
@@ -68,7 +69,7 @@ export class Game {
     const p = r.points[this._reinforceIdx % r.points.length]; this._reinforceIdx++;
     const spot = this.level.findOpen(p.x, p.y, 12);
     const type = r.types[rng.int(r.types.length)];
-    this.enemies.push(new Enemy(spot.x, spot.y, type, []));
+    this.enemies.push(applyPhaseToEnemy(new Enemy(spot.x, spot.y, type, []), phaseDifficulty(this.phaseIndex)));
   }
   updateMenu() { const items = 5; if (this.input.tap('ArrowDown') || this.input.tap('KeyS')) { this.menuIndex = (this.menuIndex + 1) % items; this.audio.play('ui'); } if (this.input.tap('ArrowUp') || this.input.tap('KeyW')) { this.menuIndex = (this.menuIndex + items - 1) % items; this.audio.play('ui'); } if (this.menuIndex === 1 && (this.input.tap('ArrowLeft') || this.input.tap('KeyA'))) this.cycleMask(-1); if (this.menuIndex === 1 && (this.input.tap('ArrowRight') || this.input.tap('KeyD'))) this.cycleMask(1); if (this.input.tap('Enter') || this.input.mouse.leftPressed) { if (this.input.mouse.leftPressed) { const y = this.input.mouse.y; this.menuIndex = clamp(Math.floor((y - 270) / 40), 0, 4); } if (this.menuIndex === 0) this.startRun(); if (this.menuIndex === 1) this.cycleMask(1); if (this.menuIndex === 2) this.state = 'settings'; if (this.menuIndex === 3) this.state = 'credits'; if (this.menuIndex === 4) location.reload(); } }
   updateSettings() { const keys = ['master', 'music', 'sfx', 'shake', 'blood', 'quality', 'post', 'pixel', 'flashes', 'highContrastCursor']; if (this.input.tap('Escape')) { this.save.settings = this.settings; storeSave(this.save); this.state = 'menu'; return; } if (this.input.tap('ArrowDown') || this.input.tap('KeyS')) this.settingsIndex = (this.settingsIndex + 1) % keys.length; if (this.input.tap('ArrowUp') || this.input.tap('KeyW')) this.settingsIndex = (this.settingsIndex + keys.length - 1) % keys.length; const k = keys[this.settingsIndex], dir = (this.input.tap('ArrowRight') || this.input.tap('KeyD') ? 1 : 0) - (this.input.tap('ArrowLeft') || this.input.tap('KeyA') ? 1 : 0); if (dir) { if (typeof this.settings[k] === 'boolean') this.settings[k] = !this.settings[k]; else this.settings[k] = clamp(this.settings[k] + dir * .1, 0, 1); this.audio.apply(); this.fx.bloodEnabled = this.settings.blood; this.fx.quality = this.settings.quality; this.applyDomSettings(); this.applyRenderSettings(); this.audio.play('ui'); } }

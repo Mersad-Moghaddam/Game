@@ -437,6 +437,18 @@ try {
   const phaseInfo = await evalG(() => ({ phaseIndex: window.__VEILDRIVE__.phaseIndex, phase: window.__VEILDRIVE__.phase && window.__VEILDRIVE__.phase.id, hp: window.__VEILDRIVE__.player.hp, weapon: window.__VEILDRIVE__.player.current.id }));
   ok('phase: phase 2 is active and the loadout carried over', phaseInfo.phaseIndex === 1 && phaseInfo.phase === 'p2' && phaseInfo.hp === 5 && phaseInfo.weapon === carriedWeapon, JSON.stringify(phaseInfo));
 
+  // --- difficulty wiring: the same enemy type scales reaction down and
+  //     detection up when the mission moves from phase 1 into phase 2 ---
+  const scaled = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(0, true);
+    const p1 = g.enemies.find(e => e.type === 'guard');
+    g.startMission(5, true);
+    const p2 = g.enemies.find(e => e.type === 'guard');
+    return { p1reaction: p1.reaction, p1vision: p1.vision, p2reaction: p2.reaction, p2vision: p2.vision };
+  });
+  ok('phase: the same enemy type reacts faster and sees farther in phase 2', scaled.p2reaction < scaled.p1reaction && scaled.p2vision > scaled.p1vision, JSON.stringify(scaled));
+
   // --- sabotage: arming every charge completes the goal ---
   const sabotageDone = await evalG(() => {
     const g = window.__VEILDRIVE__;

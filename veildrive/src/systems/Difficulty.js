@@ -15,3 +15,12 @@ export function phaseDifficulty(phaseIndex) {
   const d = PHASES[i].difficulty;
   return { reaction: d.reaction, detect: d.detect, score: d.score };
 }
+
+// Shared by the mission rollout and reinforcement waves so every enemy in a
+// phase gets the same reaction/detection scaling. Speed is intentionally left
+// untouched.
+export function applyPhaseToEnemy(enemy, diff) {
+  enemy.reaction = Math.max(0.05, enemy.reaction * diff.reaction);
+  enemy.vision *= diff.detect;
+  return enemy;
+}

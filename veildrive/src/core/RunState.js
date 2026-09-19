@@ -1,6 +1,6 @@
 // Run state: campaign flow, missions, masks, upgrades, scoring and death.
 import { UPGRADES, MASKS, COLORS } from '../data/config.js';
-import { MISSIONS, PHASES, MISSIONS_PER_PHASE, phaseOfMission, phaseStart } from '../data/missions.js';
+import { MISSIONS, PHASES, phaseOfMission, phaseStart } from '../data/missions.js';
 import { clamp } from './math.js';
 import { rng } from './rng.js';
 import { storeSave } from './Save.js';
@@ -10,7 +10,7 @@ import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Boss } from '../entities/Boss.js';
 import { FX } from '../systems/FX.js';
-import { phaseDifficulty } from '../systems/Difficulty.js';
+import { phaseDifficulty, applyPhaseToEnemy } from '../systems/Difficulty.js';
 
 export const RunStateSystem = {
   startRun() {
@@ -35,13 +35,11 @@ export const RunStateSystem = {
     this.fx = new FX(); this.fx.bloodEnabled = this.settings.blood; this.fx.quality = this.settings.quality;
     this.fx.ring(sp.x, sp.y, COLORS.cyan, 64, .5);
     this.worldCanvas = null; this.worldCtx = null; this.hurtFlash = 0;
+    const diff = phaseDifficulty(phase);
     for (const e of def.enemies) {
       const p = this.level.findOpen(e.x, e.y, 12);
       const wps = (e.waypoints || []).map(w => this.level.findOpen(w.x, w.y, 12));
-      const en = new Enemy(p.x, p.y, e.type, wps);
-      const diff = phaseDifficulty(phase);
-      en.reaction = Math.max(0.05, en.reaction * diff.reaction);
-      en.vision *= diff.detect;
+      const en = applyPhaseToEnemy(new Enemy(p.x, p.y, e.type, wps), diff);
       this.enemies.push(en);
       if (def.goal.type === 'target' && !this.target && Math.abs(e.x - def.goal.x) < 10 && Math.abs(e.y - def.goal.y) < 10) this.target = en;
     }

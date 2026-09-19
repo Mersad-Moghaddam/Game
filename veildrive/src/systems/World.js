@@ -48,8 +48,7 @@ export const WorldSystem = {
       }
       if (best) {
         if (sabotage) best.armed = true; else best.taken = true;
-        this.audio.play('pickup');
-        if (goalReached(this.mission.goal, { enemies: this.enemies, boss: this.boss, target: this.target, objectives: this.level.objectives, missionTime: this.missionTime })) this.completeGoal();
+        if (goalReached(this.mission.goal, { enemies: this.enemies, boss: this.boss, target: this.target, objectives: this.level.objectives, missionTime: this.missionTime })) this.completeGoal(); else this.audio.play('pickup');
         return;
       }
     }

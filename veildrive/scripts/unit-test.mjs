@@ -6,7 +6,7 @@ import { LightBuffer } from '../src/render/LightBuffer.js';
 import { NavGrid } from '../src/core/NavGrid.js';
 import { obtain, compact } from '../src/core/Pool.js';
 import { assignRoles } from '../src/systems/Tactics.js';
-import { pressure, phaseDifficulty } from '../src/systems/Difficulty.js';
+import { pressure, phaseDifficulty, applyPhaseToEnemy } from '../src/systems/Difficulty.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
@@ -979,6 +979,20 @@ test('difficulty: phaseDifficulty scales reaction down, detect and score up', ()
   for (const d of [d1, d2, d3]) for (const k of ['reaction', 'detect', 'score']) assert(Number.isFinite(d[k]) && d[k] > 0, k);
   assert.deepEqual(phaseDifficulty(99), d3, 'high clamps to the last phase');
   assert.deepEqual(phaseDifficulty(-4), d1, 'low clamps to the first phase');
+});
+test('difficulty: applyPhaseToEnemy scales reaction down and detection up', () => {
+  const base = { reaction: 0.32, vision: 390, speed: 120 };
+  const d2 = phaseDifficulty(1);
+  const e = applyPhaseToEnemy({ ...base }, d2);
+  assert(e.reaction < base.reaction, 'reaction shrinks in phase 2');
+  assert(e.vision > base.vision, 'detection grows in phase 2');
+  assert.equal(e.speed, base.speed, 'speed is untouched');
+  const d3 = phaseDifficulty(2);
+  const e3 = applyPhaseToEnemy({ ...base }, d3);
+  assert(e3.reaction < e.reaction, 'reaction shrinks again in phase 3');
+  assert(e3.vision > e.vision, 'detection grows again in phase 3');
+  const floor = applyPhaseToEnemy({ reaction: 0.0001, vision: 1 }, d3);
+  assert(floor.reaction >= 0.05, 'reaction is floored at 0.05');
 });
 test('save: phase progress fields are repaired and round-trip', () => {
   memStore['veildrive-save-v1'] = JSON.stringify({ version: 1 });

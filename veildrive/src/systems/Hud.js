@@ -56,9 +56,9 @@ export const HudSystem = {
     c.textAlign = 'center';
     c.fillStyle = COLORS.cyan; c.font = 'bold 13px monospace'; c.fillText('NEW GAME+', 480, 196);
     c.fillStyle = COLORS.hotPink; c.font = 'bold 40px monospace'; c.fillText('PHASE CLEARED', 480, 244);
-    c.fillStyle = COLORS.bone; c.font = 'bold 24px monospace'; c.fillText(`PHASE ${next ? phaseOfMission(this.missionIndex + 1) + 1 : 0} — ${next ? next.name : ''}`, 480, 292);
-    c.fillStyle = '#c9b7d8'; c.font = '12px monospace'; if (next) this.wrapText(c, next.sub, 480, 320, 540, 16);
-    c.fillStyle = COLORS.orange; c.font = 'bold 12px monospace'; if (next) c.fillText(`THREAT x${next.difficulty.score.toFixed(2)} SCORE  ·  REACTION x${next.difficulty.reaction.toFixed(2)}`, 480, 356);
+    c.fillStyle = COLORS.bone; c.font = 'bold 24px monospace'; c.fillText(`PHASE ${phaseOfMission(this.missionIndex + 1) + 1} — ${next.name}`, 480, 292);
+    c.fillStyle = '#c9b7d8'; c.font = '12px monospace'; this.wrapText(c, next.sub, 480, 320, 540, 16);
+    c.fillStyle = COLORS.orange; c.font = 'bold 12px monospace'; c.fillText(`THREAT x${next.difficulty.score.toFixed(2)} SCORE  ·  REACTION x${next.difficulty.reaction.toFixed(2)}`, 480, 356);
     const t = clamp((this.phaseT || 0) / 2.8, 0, 1);
     c.fillStyle = COLORS.ink; c.fillRect(340, 382, 280, 5);
     c.fillStyle = COLORS.hotPink; c.fillRect(340, 382, 280 * t, 5);
