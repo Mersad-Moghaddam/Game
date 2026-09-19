@@ -11,6 +11,7 @@ import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
 import { MISSIONS, MISSION_COUNT, PHASES, PHASE_COUNT, MISSIONS_PER_PHASE, phaseOfMission, phaseStart } from '../src/data/missions.js';
+import { goalReached } from '../src/core/goals.js';
 import { Level } from '../src/world/Level.js';
 import { FX } from '../src/systems/FX.js';
 import { Player } from '../src/entities/Player.js';
@@ -896,6 +897,41 @@ test('phases: new objective and reinforcement positions are open and reachable',
     }
   }
   assert.equal(bad.length, 0, bad.join(' | '));
+});
+
+// --------------------------------------------------------------- goals
+test('goals: goalReached truth table for all seven types', () => {
+  assert.equal(goalReached({ type: 'eliminate' }, { enemies: [{ dead: true }] }), true);
+  assert.equal(goalReached({ type: 'eliminate' }, { enemies: [{ dead: false }] }), false);
+  assert.equal(goalReached({ type: 'target' }, { target: { dead: true } }), true);
+  assert.equal(goalReached({ type: 'target' }, { target: { dead: false } }), false);
+  assert.equal(goalReached({ type: 'target' }, { target: null }), false);
+  assert.equal(goalReached({ type: 'boss' }, { boss: { dead: true } }), true);
+  assert.equal(goalReached({ type: 'boss' }, { boss: null }), false);
+  assert.equal(goalReached({ type: 'retrieve' }, { objectives: [{ taken: true }] }), true);
+  assert.equal(goalReached({ type: 'retrieve' }, { objectives: [{ taken: false }] }), false);
+  assert.equal(goalReached({ type: 'collect' }, { objectives: [{ taken: true }, { taken: false }] }), false);
+  assert.equal(goalReached({ type: 'collect' }, { objectives: [{ taken: true }, { taken: true }] }), true);
+  assert.equal(goalReached({ type: 'sabotage' }, { objectives: [{ armed: true }, { armed: false }] }), false);
+  assert.equal(goalReached({ type: 'sabotage' }, { objectives: [{ armed: true }, { armed: true }] }), true);
+  assert.equal(goalReached({ type: 'survive', duration: 10 }, { missionTime: 9.9 }), false);
+  assert.equal(goalReached({ type: 'survive', duration: 10 }, { missionTime: 10 }), true);
+  assert.equal(goalReached({ type: 'unknown' }, {}), false);
+  assert.equal(goalReached(null, {}), false);
+});
+test('level: objectives are built for retrieve, collect and sabotage', () => {
+  const retrieve = new Level({ ...MISSIONS[1] });
+  assert.equal(retrieve.objectives.length, 1);
+  assert.equal(retrieve.objectives[0].taken, false);
+  const collect = MISSIONS.find(m => m.goal.type === 'collect');
+  const Lc = new Level(collect);
+  assert.equal(Lc.objectives.length, collect.goal.items.length);
+  assert(Lc.objectives.every(o => o.taken === false && o.armed === false && typeof o.label === 'string'));
+  const sab = MISSIONS.find(m => m.goal.type === 'sabotage');
+  const Ls = new Level(sab);
+  assert.equal(Ls.objectives.length, sab.goal.targets.length);
+  const elim = new Level(MISSIONS[0]);
+  assert.equal(elim.objectives.length, 0);
 });
 
 // --------------------------------------------------------------- report

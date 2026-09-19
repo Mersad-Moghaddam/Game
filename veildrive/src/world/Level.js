@@ -20,14 +20,16 @@ export class Level{
     this.walls = []; this.doors = []; this.props = []; this.pickups = []; this.lights = [];
     this.goal = def.goal || { type: 'eliminate' };
     this.exit = { x: def.exit.x, y: def.exit.y, active: false };
-    this.objective = null;
+    this.objectives = [];
     this.dirty = false;
     for(const w of def.walls) this.walls.push({ x: w.x, y: w.y, w: w.w, h: w.h });
     for(const d of def.doors) this.doors.push({ x: d.x, y: d.y, w: d.w, h: d.h, axis: d.axis || (d.w > d.h ? 'h' : 'v'), open: false, broken: false });
     for(const p of def.props) this.props.push({ x: p.x, y: p.y, w: p.w, h: p.h, type: p.type, solid: p.solid !== false, hp: p.hp || 2, broken: false });
     for(const l of def.lights) this.lights.push({ x: l.x, y: l.y, r: l.r, mood: this.mood });
     for(const p of def.pickups) this.pickups.push({ x: p.x, y: p.y, weapon: makeWeapon(p.weapon) });
-    if(this.goal.type === 'retrieve') this.objective = { x: this.goal.x, y: this.goal.y, taken: false, label: this.goal.label || 'OBJECTIVE' };
+    if(this.goal.type === 'retrieve') this.objectives.push({ x: this.goal.x, y: this.goal.y, taken: false, armed: false, label: this.goal.label || 'OBJECTIVE' });
+    if(this.goal.type === 'collect') for(const it of (this.goal.items || [])) this.objectives.push({ x: it.x, y: it.y, taken: false, armed: false, label: it.label || 'ITEM' });
+    if(this.goal.type === 'sabotage') for(const t of (this.goal.targets || [])) this.objectives.push({ x: t.x, y: t.y, taken: false, armed: false, label: t.label || 'CHARGE' });
   }
   markDirty(){ this.dirty = true; this._blockersDirty = true; this._hashDirty = true; }
   // Cached collision blocker list. Movement and line-of-sight query this many
@@ -146,7 +148,16 @@ export class Level{
   }
   drawItems(ctx){
     for(const p of this.pickups){if(p.taken)continue;ctx.save();ctx.translate(p.x,p.y);ctx.globalAlpha=.3;ctx.fillStyle=p.weapon.color;ctx.beginPath();ctx.arc(0,0,15,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.rotate(-.42);drawWeaponArt(ctx,p.weapon,0.85);ctx.restore();}
-    if(this.objective&&!this.objective.taken){ctx.save();ctx.translate(this.objective.x,this.objective.y);ctx.globalAlpha=.3;ctx.fillStyle=COLORS.orange;ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.rotate(-.35);ctx.fillStyle=COLORS.orange;ctx.fillRect(-11,-7,22,14);ctx.fillStyle=COLORS.ink;ctx.fillRect(-7,-4,5,8);ctx.fillRect(2,-4,5,8);ctx.restore();}
+    const sab = this.goal.type === 'sabotage';
+    for(const o of this.objectives){
+      const pending = sab ? !o.armed : !o.taken;
+      if(!pending) continue;
+      ctx.save();ctx.translate(o.x,o.y);ctx.globalAlpha=.3;ctx.fillStyle=COLORS.orange;ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      ctx.rotate(-.35);
+      if(sab){ctx.fillStyle=COLORS.orange;ctx.fillRect(-8,-10,16,20);ctx.fillStyle=COLORS.ink;ctx.fillRect(-4,-6,8,12);ctx.fillStyle=COLORS.blood;ctx.beginPath();ctx.arc(0,-14,3,0,Math.PI*2);ctx.fill();}
+      else{ctx.fillStyle=COLORS.orange;ctx.fillRect(-11,-7,22,14);ctx.fillStyle=COLORS.ink;ctx.fillRect(-7,-4,5,8);ctx.fillRect(2,-4,5,8);}
+      ctx.restore();
+    }
     if(this.exit&&this.exit.active){ctx.save();ctx.translate(this.exit.x,this.exit.y);ctx.globalAlpha=.35;ctx.fillStyle=COLORS.cyan;ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=COLORS.cyan;ctx.lineWidth=3;ctx.strokeRect(-17,-17,34,34);ctx.fillStyle=COLORS.bone;ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('EXIT',0,4);ctx.textAlign='left';ctx.restore();}
   }
 }
