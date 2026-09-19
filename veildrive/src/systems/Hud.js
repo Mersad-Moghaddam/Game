@@ -26,8 +26,23 @@ export const HudSystem = {
     if (this.hurtFlash > 0) { const a = Math.min(.5, this.hurtFlash * .5); const vg = c.createRadialGradient(480, 270, 120, 480, 270, 520); vg.addColorStop(0, 'rgba(160,0,20,0)'); vg.addColorStop(1, `rgba(180,0,25,${a})`); c.fillStyle = vg; c.fillRect(0, 0, 960, 540); }
     c.restore(); this.drawReticle(c);
   },
-  contextPrompt() { if (this.goalDone && this.level.exit.active && dist(this.player, this.level.exit) < 52) return '[E] ESCAPE'; if (!this.goalDone && this.mission && this.mission.goal.type === 'retrieve' && this.level.objective && !this.level.objective.taken && dist(this.player, this.level.objective) < 55) return `[E] TAKE ${this.level.objective.label}`; for (const e of this.enemies) if (!e.dead && e.stun > 0 && dist(this.player, e) < 42) return '[SPACE] FINISH'; for (const p of this.level.pickups) if (!p.taken && dist(this.player, p) < 48) return `[E] TAKE ${p.weapon.name.toUpperCase()}`; const d = this.level.nearestDoor(this.player, 58); if (d && !d.open) return '[E] OPEN  /  [SPACE] BREACH'; return ''; },
-  objectiveText() { if (this.goalDone) return 'REACH THE EXIT'; if (!this.mission) return ''; const g = this.mission.goal; if (g.type === 'eliminate') return 'ELIMINATE ALL HOSTILES'; if (g.type === 'target') return 'KILL THE MARKED MAN'; if (g.type === 'boss') return 'KILL THE PORTER'; if (g.type === 'retrieve') return 'TAKE ' + (this.level.objective ? this.level.objective.label : 'THE OBJECTIVE'); return ''; },
+  contextPrompt() { if (this.goalDone && this.level.exit.active && dist(this.player, this.level.exit) < 52) return '[E] ESCAPE'; if (!this.goalDone && this.mission && (this.mission.goal.type === 'retrieve' || this.mission.goal.type === 'collect')) { for (const o of this.level.objectives) if (!o.taken && dist(this.player, o) < 55) return `[E] TAKE ${o.label}`; } if (!this.goalDone && this.mission && this.mission.goal.type === 'sabotage') { for (const o of this.level.objectives) if (!o.armed && dist(this.player, o) < 55) return `[E] PLANT ${o.label}`; } for (const e of this.enemies) if (!e.dead && e.stun > 0 && dist(this.player, e) < 42) return '[SPACE] FINISH'; for (const p of this.level.pickups) if (!p.taken && dist(this.player, p) < 48) return `[E] TAKE ${p.weapon.name.toUpperCase()}`; const d = this.level.nearestDoor(this.player, 58); if (d && !d.open) return '[E] OPEN  /  [SPACE] BREACH'; return ''; },
+  objectiveText() {
+    if (this.goalDone) return 'REACH THE EXIT';
+    if (!this.mission) return '';
+    const g = this.mission.goal;
+    const total = this.level.objectives.length;
+    const taken = this.level.objectives.filter(o => o.taken).length;
+    const armed = this.level.objectives.filter(o => o.armed).length;
+    if (g.type === 'eliminate') return 'ELIMINATE ALL HOSTILES';
+    if (g.type === 'target') return 'KILL THE MARKED MAN';
+    if (g.type === 'boss') return 'KILL THE PORTER';
+    if (g.type === 'retrieve') return 'TAKE ' + (this.level.objectives[0] ? this.level.objectives[0].label : 'THE OBJECTIVE');
+    if (g.type === 'collect') return `TAKE ITEMS ${taken}/${total}`;
+    if (g.type === 'sabotage') return `ARM CHARGES ${armed}/${total}`;
+    if (g.type === 'survive') return `HOLD OUT ${Math.max(0, Math.ceil((g.duration || 0) - (this.missionTime || 0)))}s`;
+    return '';
+  },
   tutorialText() { if (this.missionIndex !== 0) return ''; if (this.missionTime < 3.8) return 'WASD  MOVE'; if (this.missionTime < 7.5) return 'MOUSE  AIM'; if (this.missionTime < 11) return 'CLICK  ATTACK'; if (this.missionTime < 14.5) return 'E  PICK UP / OPEN'; if (this.missionTime < 18) return 'SHIFT  DASH'; return ''; },
   drawReticle(c) { const m = this.input.mouse; c.save(); c.translate(m.x, m.y); c.strokeStyle = this.settings.highContrastCursor ? '#ffffff' : COLORS.cyan; c.lineWidth = 1.5; const r = 8 + (this.player?.attackCd || 0) * 7; c.beginPath(); c.moveTo(-r - 5, 0); c.lineTo(-r, 0); c.moveTo(r, 0); c.lineTo(r + 5, 0); c.moveTo(0, -r - 5); c.lineTo(0, -r); c.moveTo(0, r); c.lineTo(0, r + 5); c.stroke(); c.restore(); },
   drawPost(c) { if (!this.settings.post) return; c.save(); const g = c.createRadialGradient(480, 270, 180, 480, 270, 570); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.55)'); c.fillStyle = g; c.fillRect(0, 0, 960, 540); c.globalAlpha = .035; c.fillStyle = '#fff'; for (let i = 0; i < 55; i++) c.fillRect((i * 137 + performance.now() * .02) % 960, (i * 83) % 540, 1, 1); c.restore(); },
@@ -52,9 +67,15 @@ export const HudSystem = {
       c.beginPath(); c.moveTo(13, 0); c.lineTo(-7, -9); c.lineTo(-7, 9); c.closePath(); c.fill(); c.restore(); c.globalAlpha = 1;
     };
     let target = null;
-    const ob = this.level.objective;
-    if (!this.goalDone && this.mission && this.mission.goal.type === 'retrieve' && ob && !ob.taken) target = ob;
-    else if (!this.goalDone && this.mission && this.mission.goal.type === 'target' && this.target && !this.target.dead) target = this.target;
+    if (!this.goalDone && this.mission && ['retrieve', 'collect', 'sabotage'].includes(this.mission.goal.type)) {
+      const sabotage = this.mission.goal.type === 'sabotage';
+      let best = null, bd = Infinity;
+      for (const o of this.level.objectives) {
+        if (sabotage ? o.armed : o.taken) continue;
+        const d = Math.hypot(o.x - this.player.x, o.y - this.player.y); if (d < bd) { bd = d; best = o; }
+      }
+      target = best;
+    } else if (!this.goalDone && this.mission && this.mission.goal.type === 'target' && this.target && !this.target.dead) target = this.target;
     else if (this.goalDone && this.level.exit.active) target = this.level.exit;
     if (target) { const s = w2s(target.x, target.y); if (s.x < mx || s.x > VIRTUAL_W - mx || s.y < my || s.y > VIRTUAL_H - my) chevron(s.x, s.y, COLORS.cyan); }
     for (const e of this.enemies) { if (e.dead || e.state !== 'COMBAT') continue; const s = w2s(e.x, e.y); if (s.x < mx || s.x > VIRTUAL_W - mx || s.y < my || s.y > VIRTUAL_H - my) chevron(s.x, s.y, COLORS.blood); }

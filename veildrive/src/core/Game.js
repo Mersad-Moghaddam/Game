@@ -99,7 +99,7 @@ export class Game {
     g.save(); g.globalCompositeOperation = 'lighter'; g.translate(ox, oy);
     for (const b of this.projectiles) { g.strokeStyle = b.color; g.lineWidth = 3; g.globalAlpha = .45; g.beginPath(); g.moveTo(b.px, b.py); g.lineTo(b.x, b.y); g.stroke(); } g.globalAlpha = 1;
     for (const p of this.level.pickups) { if (p.taken) continue; g.globalAlpha = .5; g.fillStyle = p.weapon.color; g.beginPath(); g.arc(p.x, p.y, 10, 0, Math.PI * 2); g.fill(); } g.globalAlpha = 1;
-    { const ob = this.level.objective; if (ob && !ob.taken) { g.globalAlpha = .6; g.fillStyle = COLORS.orange; g.beginPath(); g.arc(ob.x, ob.y, 16, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; } }
+    for (const ob of this.level.objectives) { if (ob.taken || ob.armed) continue; g.globalAlpha = .6; g.fillStyle = COLORS.orange; g.beginPath(); g.arc(ob.x, ob.y, 16, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
     if (this.level.exit && this.level.exit.active) { g.globalAlpha = .5; g.fillStyle = COLORS.cyan; g.beginPath(); g.arc(this.level.exit.x, this.level.exit.y, 22, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
     this.fx.drawGlow(g); for (const e of this.enemies) e.drawGlow(g); if (this.boss) this.boss.drawGlow(g); if (!this.player.dead) this.player.drawGlow(g); g.restore();
     this.pushLights(); this.renderer.render(); this.drawHUD(ui); if (this.state === 'playing') this.drawIntro(ui); if (this.state === 'interlude') this.drawInterlude(ui); if (this.state === 'upgrade') this.drawUpgrade(ui); if (this.state === 'paused') this.drawPause(ui); if (this.player && this.player.dead) this.drawDeath(ui); if (this.debug) this.drawDebug(ui);

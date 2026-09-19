@@ -13,6 +13,7 @@ import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
 import { MISSIONS, MISSION_COUNT, PHASES, PHASE_COUNT, MISSIONS_PER_PHASE, phaseOfMission, phaseStart } from '../src/data/missions.js';
 import { goalReached } from '../src/core/goals.js';
 import { Level } from '../src/world/Level.js';
+import { WorldSystem } from '../src/systems/World.js';
 import { FX } from '../src/systems/FX.js';
 import { Player } from '../src/entities/Player.js';
 import { Enemy } from '../src/entities/Enemy.js';
@@ -932,6 +933,41 @@ test('level: objectives are built for retrieve, collect and sabotage', () => {
   assert.equal(Ls.objectives.length, sab.goal.targets.length);
   const elim = new Level(MISSIONS[0]);
   assert.equal(elim.objectives.length, 0);
+});
+
+// --------------------------------------------------- world interaction
+function interactStub(level, mission) {
+  return {
+    player: { x: 0, y: 0, dead: false, a: 0 }, enemies: [], goalDone: false,
+    level, mission, score: 0, audio: { play() {} }, hitStop() {}, shake() {},
+    emitNoise() {}, completeGoal() { this.goalDone = true; },
+  };
+}
+test('world: sabotage arms each charge and completes on the last', () => {
+  const def = { id: 't', name: 'T', sub: 'x', entryLabel: 'X', entryKind: 'door', mood: 'violet', w: 400, h: 300,
+    spawn: { x: 40, y: 40 }, exit: { x: 40, y: 40 },
+    goal: { type: 'sabotage', targets: [{ x: 200, y: 150, label: 'A' }, { x: 300, y: 200, label: 'B' }] },
+    walls: [], doors: [], props: [], lights: [], pickups: [], enemies: [] };
+  const level = new Level(def), g = interactStub(level, def);
+  g.player.x = 200; g.player.y = 150;
+  WorldSystem.interact.call(g, false);
+  assert.equal(level.objectives[0].armed, true); assert.equal(g.goalDone, false);
+  g.player.x = 300; g.player.y = 200;
+  WorldSystem.interact.call(g, false);
+  assert.equal(level.objectives[1].armed, true); assert.equal(g.goalDone, true);
+});
+test('world: collect takes each item and completes on the last', () => {
+  const def = { id: 't', name: 'T', sub: 'x', entryLabel: 'X', entryKind: 'door', mood: 'violet', w: 400, h: 300,
+    spawn: { x: 40, y: 40 }, exit: { x: 40, y: 40 },
+    goal: { type: 'collect', items: [{ x: 200, y: 150, label: 'A' }, { x: 300, y: 200, label: 'B' }] },
+    walls: [], doors: [], props: [], lights: [], pickups: [], enemies: [] };
+  const level = new Level(def), g = interactStub(level, def);
+  g.player.x = 200; g.player.y = 150;
+  WorldSystem.interact.call(g, false);
+  assert.equal(level.objectives[0].taken, true); assert.equal(g.goalDone, false);
+  g.player.x = 300; g.player.y = 200;
+  WorldSystem.interact.call(g, false);
+  assert.equal(level.objectives[1].taken, true); assert.equal(g.goalDone, true);
 });
 
 // --------------------------------------------------------------- report

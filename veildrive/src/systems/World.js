@@ -1,6 +1,7 @@
 // World: static-world bake/dirty handling, decal/corpse painting, lighting
 // buffer assembly and player-world interaction (doors, pickups, executions).
 import { clamp, dist } from '../core/math.js';
+import { goalReached } from '../core/goals.js';
 import { NavGrid } from '../core/NavGrid.js';
 import { LightBuffer } from '../render/LightBuffer.js';
 
@@ -38,8 +39,19 @@ export const WorldSystem = {
       }
     }
     if (this.goalDone && this.level.exit.active && dist(this.player, this.level.exit) < 52) { this.missionComplete(); return; }
-    if (!this.goalDone && this.mission.goal.type === 'retrieve' && this.level.objective && !this.level.objective.taken && dist(this.player, this.level.objective) < 55) {
-      this.level.objective.taken = true; this.completeGoal(); return;
+    if (!this.goalDone && this.mission.goal.type !== 'survive') {
+      const sabotage = this.mission.goal.type === 'sabotage';
+      let best = null, bd = 55;
+      for (const o of this.level.objectives) {
+        if (sabotage ? o.armed : o.taken) continue;
+        const d = dist(this.player, o); if (d < bd) { best = o; bd = d; }
+      }
+      if (best) {
+        if (sabotage) best.armed = true; else best.taken = true;
+        this.audio.play('pickup');
+        if (goalReached(this.mission.goal, { enemies: this.enemies, boss: this.boss, target: this.target, objectives: this.level.objectives, missionTime: this.missionTime })) this.completeGoal();
+        return;
+      }
     }
     if (!kick) {
       let best = null, bd = 48;
