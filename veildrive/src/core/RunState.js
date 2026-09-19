@@ -1,6 +1,6 @@
 // Run state: campaign flow, missions, masks, upgrades, scoring and death.
 import { UPGRADES, MASKS, COLORS } from '../data/config.js';
-import { MISSIONS } from '../data/missions.js';
+import { MISSIONS, PHASES, MISSIONS_PER_PHASE, phaseOfMission, phaseStart } from '../data/missions.js';
 import { clamp } from './math.js';
 import { rng } from './rng.js';
 import { storeSave } from './Save.js';
@@ -10,18 +10,22 @@ import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Boss } from '../entities/Boss.js';
 import { FX } from '../systems/FX.js';
+import { phaseDifficulty } from '../systems/Difficulty.js';
 
 export const RunStateSystem = {
   startRun() {
     this.unlockAudio();
     rng.reseed(this.runSeed != null ? this.runSeed : (Date.now() >>> 0));
-    this.missionIndex = 0; this.deaths = 0; this.campaignTime = 0; this.score = 0; this.combo = 0; this.comboT = 0;
+    this.missionIndex = 0; this.phaseIndex = 0; this.phaseMissionIndex = 0; this.phase = PHASES[0]; this.scoreMul = 1; this.phaseT = 0; this.deaths = 0; this.campaignTime = 0; this.score = 0; this.combo = 0; this.comboT = 0;
     this.maxCombo = 0; this.shots = 0; this.hits = 0; this.stealthKills = 0; this.killCount = 0; this.weaponKinds = new Set();
     this.results = null; this.upgradeShown = false; this.upgradeChoices = []; this.activeUpgrades = []; this.missionsCleared = 0;
     this.startMission(0, true);
   },
   startMission(i, fresh = false, respawn = false) {
-    const def = MISSIONS[i]; this.missionIndex = i; this.mission = def; this.level = new Level(def); this.nav = new NavGrid(this.level);
+    const def = MISSIONS[i]; this.missionIndex = i; this.mission = def;
+    const phase = phaseOfMission(i); this.phaseIndex = phase; this.phase = PHASES[phase]; this.phaseMissionIndex = i - phaseStart(phase); this.scoreMul = PHASES[phase].difficulty.score;
+    this.save.highestPhase = Math.max(this.save.highestPhase || 1, phase + 1); storeSave(this.save);
+    this.level = new Level(def); this.nav = new NavGrid(this.level);
     const sp = this.level.findOpen(def.spawn.x, def.spawn.y, 14);
     if (fresh || !this.player) { this.player = new Player(sp.x, sp.y); this.applyMask(); }
     else { this.player.x = sp.x; this.player.y = sp.y; this.player.dead = false; this.player.hp = respawn ? this.player.maxHp : Math.min(this.player.maxHp, this.player.hp + 1); }
@@ -34,7 +38,11 @@ export const RunStateSystem = {
     for (const e of def.enemies) {
       const p = this.level.findOpen(e.x, e.y, 12);
       const wps = (e.waypoints || []).map(w => this.level.findOpen(w.x, w.y, 12));
-      const en = new Enemy(p.x, p.y, e.type, wps); this.enemies.push(en);
+      const en = new Enemy(p.x, p.y, e.type, wps);
+      const diff = phaseDifficulty(phase);
+      en.reaction = Math.max(0.05, en.reaction * diff.reaction);
+      en.vision *= diff.detect;
+      this.enemies.push(en);
       if (def.goal.type === 'target' && !this.target && Math.abs(e.x - def.goal.x) < 10 && Math.abs(e.y - def.goal.y) < 10) this.target = en;
     }
     if (def.goal.type === 'target' && !this.target && this.enemies.length) this.target = this.enemies[0];
@@ -45,8 +53,8 @@ export const RunStateSystem = {
     this.updateCamera(0); this.cam.x = this.cam.tx; this.cam.y = this.cam.ty;
     this.state = 'playing'; this.audio.setIntensity(def.goal.type === 'boss' ? .8 : .2); this.applyRenderSettings();
   },
-  completeGoal() { if (this.goalDone) return; this.goalDone = true; this.level.exit.active = true; this.audio.play('pickup'); this.score += 400; },
-  missionComplete() { this.missionsCleared++; this.score += 1000 + Math.max(0, Math.round(2500 - this.missionTime * 15)); this.audio.setIntensity(.1); this.state = 'interlude'; this.interludeT = 0; this.hitStop(.04); },
+  completeGoal() { if (this.goalDone) return; this.goalDone = true; this.level.exit.active = true; this.audio.play('pickup'); this.score += Math.round(400 * (this.scoreMul || 1)); },
+  missionComplete() { this.missionsCleared++; this.score += Math.round((1000 + Math.max(0, Math.round(2500 - this.missionTime * 15))) * (this.scoreMul || 1)); this.audio.setIntensity(.1); this.state = 'interlude'; this.interludeT = 0; this.hitStop(.04); },
   applyMask() {
     const id = this.save.selectedMask || 'MOTH-0'; this.player.maskId = id;
     if (id === 'MOTH-0') this.player.comboBonus += .35;
@@ -66,6 +74,7 @@ export const RunStateSystem = {
     while (this.upgradeChoices.length < 3) { const u = pool.splice(rng.int(pool.length), 1)[0]; this.upgradeChoices.push(u); }
     this.audio.play('ui');
   },
+  beginNextPhase() { this.state = 'phase'; this.phaseT = 0; this.audio.setIntensity(.12); this.hitStop(.04); },
   updateUpgrade() {
     let idx = -1;
     if (this.input.tap('Digit1')) idx = 0; if (this.input.tap('Digit2')) idx = 1; if (this.input.tap('Digit3')) idx = 2;
@@ -77,7 +86,7 @@ export const RunStateSystem = {
     }
   },
   restartAfterDeath() { this.startMission(this.missionIndex, false, true); },
-  addCombo(base) { this.combo++; this.comboT = 2.25 + this.player.comboBonus; this.maxCombo = Math.max(this.maxCombo, this.combo); this.score += Math.round(base * (1 + Math.min(3, this.combo * .18))); },
+  addCombo(base) { this.combo++; this.comboT = 2.25 + this.player.comboBonus; this.maxCombo = Math.max(this.maxCombo, this.combo); this.score += Math.round(base * (1 + Math.min(3, this.combo * .18)) * (this.scoreMul || 1)); },
   hitStop(sec) { this.freeze = Math.max(this.freeze || 0, sec); },
   onPlayerDeath() {
     this.deaths++; this.fx.blood(this.player.x, this.player.y, 28, this.player.a); this.fx.gib(this.player.x, this.player.y, this.player.a, 14); this.fx.limb(this.player.x, this.player.y, this.player.a, 'arm');
@@ -90,6 +99,7 @@ export const RunStateSystem = {
     const unlocks = [];
     this.results = { score: Math.round(this.score), time: this.campaignTime, accuracy: Math.round(acc * 100), combo: this.maxCombo, deaths: this.deaths, variety: this.weaponKinds.size, stealth: this.stealthKills, rank, value: Math.round(value), unlocks, missions: this.missionsCleared };
     this.save.runs++;
+    this.save.campaignsCleared = (this.save.campaignsCleared || 0) + 1;
     if (!this.save.unlockedMasks.includes('RAM-7')) { this.save.unlockedMasks.push('RAM-7'); unlocks.push('RAM-7'); }
     if (['A', 'S', 'S+'].includes(rank) && !this.save.unlockedMasks.includes('FOX-2')) { this.save.unlockedMasks.push('FOX-2'); unlocks.push('FOX-2'); }
     if (this.maxCombo >= 6 && !this.save.unlockedMasks.includes('RAVEN-3')) { this.save.unlockedMasks.push('RAVEN-3'); unlocks.push('RAVEN-3'); }

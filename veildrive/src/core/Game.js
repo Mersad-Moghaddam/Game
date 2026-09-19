@@ -5,9 +5,10 @@ import { loadSave, storeSave } from './Save.js';
 import { FX } from '../systems/FX.js';
 import { Enemy } from '../entities/Enemy.js';
 import { drawWeaponArt } from '../render/weapons-art.js';
-import { MISSION_COUNT } from '../data/missions.js';
+import { MISSION_COUNT, MISSIONS_PER_PHASE } from '../data/missions.js';
 import { clamp, rand, advance } from './math.js';
 import { rng } from './rng.js';
+import { goalReached } from './goals.js';
 // Systems are installed onto Game.prototype below, so their methods run with
 // `this` bound to the Game instance while their code lives in focused modules.
 import { CameraSystem } from '../systems/Camera.js';
@@ -40,7 +41,8 @@ export class Game {
     if (this.state === 'settings') { this.updateSettings(); return; }
     if (this.state === 'credits') { if (this.input.tap('Escape') || this.input.tap('Enter')) this.state = 'menu'; return; }
     if (this.state === 'results') { if (this.input.tap('Enter')) this.state = 'menu'; if (this.input.tap('KeyR')) this.startRun(); return; }
-    if (this.state === 'interlude') { this.interludeT = (this.interludeT || 0) + dt; this.fx.update(dt); this.shakeMag *= Math.pow(.025, dt); this.shakeX = rand(-this.shakeMag, this.shakeMag); this.shakeY = rand(-this.shakeMag, this.shakeMag); if (this.interludeT > 1.6) { if (this.missionIndex >= MISSION_COUNT - 1) this.finishCampaign(); else this.showUpgrade(); } return; }
+    if (this.state === 'interlude') { this.interludeT = (this.interludeT || 0) + dt; this.fx.update(dt); this.shakeMag *= Math.pow(.025, dt); this.shakeX = rand(-this.shakeMag, this.shakeMag); this.shakeY = rand(-this.shakeMag, this.shakeMag); if (this.interludeT > 1.6) { if (this.missionIndex >= MISSION_COUNT - 1) this.finishCampaign(); else if ((this.missionIndex + 1) % MISSIONS_PER_PHASE === 0) this.beginNextPhase(); else this.showUpgrade(); } return; }
+    if (this.state === 'phase') { this.phaseT = (this.phaseT || 0) + dt; this.fx.update(dt); this.shakeMag *= Math.pow(.025, dt); this.shakeX = rand(-this.shakeMag, this.shakeMag); this.shakeY = rand(-this.shakeMag, this.shakeMag); if (this.phaseT > 2.8) this.showUpgrade(); return; }
     if (this.state === 'upgrade') { this.updateUpgrade(); return; }
     if (this.state === 'paused') { const opts = 3; if (this.input.tap('Escape')) { this.state = 'playing'; return; } if (this.input.tap('ArrowDown') || this.input.tap('KeyS')) { this.pauseIndex = (this.pauseIndex + 1) % opts; this.audio.play('ui'); } if (this.input.tap('ArrowUp') || this.input.tap('KeyW')) { this.pauseIndex = (this.pauseIndex + opts - 1) % opts; this.audio.play('ui'); } if (this.input.tap('Enter')) { if (this.pauseIndex === 0) this.state = 'playing'; else if (this.pauseIndex === 1) { this.audio.play('ui'); this.restartAfterDeath(); } else { this.audio.play('ui'); this.state = 'menu'; this.pauseIndex = 0; } } return; }
     if (this.state !== 'playing') return;
@@ -52,7 +54,7 @@ export class Game {
     this.player.update(dt, this); this.updateCamera(dt); this.fx.update(dt); this.updateProjectiles(dt); this.updateThrown(dt); this.updateHazards(dt);
     this.acc += dt; if (this.acc >= this.aiStep) { this.aiTick(); this.acc = 0; }
     for (const e of this.enemies) e.update(dt, this); if (this.boss) this.boss.update(dt, this);
-    if (!this.goalDone) { const g = this.mission.goal; if (g.type === 'eliminate' && !this.enemies.some(e => !e.dead)) this.completeGoal(); else if (g.type === 'target' && this.target && this.target.dead) this.completeGoal(); else if (g.type === 'boss' && this.boss && this.boss.dead) this.completeGoal(); }
+    if (!this.goalDone && goalReached(this.mission.goal, { enemies: this.enemies, boss: this.boss, target: this.target, objectives: this.level.objectives, missionTime: this.missionTime })) this.completeGoal();
     this.audio.setIntensity(clamp((this.enemies.filter(e => e.state === 'COMBAT' && !e.dead).length + (this.boss && !this.boss.dead ? 3 : 0)) / 7, 0.08, 1));
     this.shakeMag *= Math.pow(.025, dt); this.shakeX = rand(-this.shakeMag, this.shakeMag); this.shakeY = rand(-this.shakeMag, this.shakeMag);
   }
@@ -79,7 +81,7 @@ export class Game {
     c.fillStyle = '#05060a'; c.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H);
     this.ensureWorld(); c.drawImage(this.worldCanvas, this.cam.x - this.shakeX, this.cam.y - this.shakeY, VIRTUAL_W, VIRTUAL_H, 0, 0, VIRTUAL_W, VIRTUAL_H);
     c.save(); c.translate(-this.cam.x + this.shakeX, -this.cam.y + this.shakeY); this.drawActors(c); c.restore();
-    this.drawLighting(c); this.drawHUD(c); if (this.state === 'playing') this.drawIntro(c); if (this.state === 'interlude') this.drawInterlude(c); if (this.state === 'upgrade') this.drawUpgrade(c); if (this.state === 'paused') this.drawPause(c); if (this.player.dead) this.drawDeath(c); this.drawPost(c); if (this.debug) this.drawDebug(c);
+    this.drawLighting(c); this.drawHUD(c); if (this.state === 'playing') this.drawIntro(c); if (this.state === 'interlude') this.drawInterlude(c); if (this.state === 'upgrade') this.drawUpgrade(c); if (this.state === 'phase') this.drawPhase(c); if (this.state === 'paused') this.drawPause(c); if (this.player.dead) this.drawDeath(c); this.drawPost(c); if (this.debug) this.drawDebug(c);
     if (c !== out) { out.setTransform(1, 0, 0, 1, 0, 0); out.imageSmoothingEnabled = false; out.drawImage(this.pixCanvas, 0, 0, VIRTUAL_W, VIRTUAL_H); }
   }
   renderGL() {
@@ -102,7 +104,7 @@ export class Game {
     for (const ob of this.level.objectives) { if (ob.taken || ob.armed) continue; g.globalAlpha = .6; g.fillStyle = COLORS.orange; g.beginPath(); g.arc(ob.x, ob.y, 16, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
     if (this.level.exit && this.level.exit.active) { g.globalAlpha = .5; g.fillStyle = COLORS.cyan; g.beginPath(); g.arc(this.level.exit.x, this.level.exit.y, 22, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
     this.fx.drawGlow(g); for (const e of this.enemies) e.drawGlow(g); if (this.boss) this.boss.drawGlow(g); if (!this.player.dead) this.player.drawGlow(g); g.restore();
-    this.pushLights(); this.renderer.render(); this.drawHUD(ui); if (this.state === 'playing') this.drawIntro(ui); if (this.state === 'interlude') this.drawInterlude(ui); if (this.state === 'upgrade') this.drawUpgrade(ui); if (this.state === 'paused') this.drawPause(ui); if (this.player && this.player.dead) this.drawDeath(ui); if (this.debug) this.drawDebug(ui);
+    this.pushLights(); this.renderer.render(); this.drawHUD(ui); if (this.state === 'playing') this.drawIntro(ui); if (this.state === 'interlude') this.drawInterlude(ui); if (this.state === 'upgrade') this.drawUpgrade(ui); if (this.state === 'phase') this.drawPhase(ui); if (this.state === 'paused') this.drawPause(ui); if (this.player && this.player.dead) this.drawDeath(ui); if (this.debug) this.drawDebug(ui);
   }
 }
 

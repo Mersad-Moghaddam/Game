@@ -6,7 +6,7 @@ import { LightBuffer } from '../src/render/LightBuffer.js';
 import { NavGrid } from '../src/core/NavGrid.js';
 import { obtain, compact } from '../src/core/Pool.js';
 import { assignRoles } from '../src/systems/Tactics.js';
-import { pressure } from '../src/systems/Difficulty.js';
+import { pressure, phaseDifficulty } from '../src/systems/Difficulty.js';
 import { WEAPONS, makeWeapon } from '../src/combat/weapons.js';
 import { COLORS, DEFAULT_SETTINGS, UPGRADES, MASKS } from '../src/data/config.js';
 import { MOODS, MOOD_IDS, moodColor } from '../src/render/mood.js';
@@ -625,13 +625,6 @@ test('tactics: roles are assigned deterministically to engaged enemies', () => {
   assert.equal(enemies[3].role, 'hold');
   assert.deepEqual(roles, assignRoles(enemies), 'assignment is stable for the same order');
 });
-test('difficulty: pressure is bounded, monotonic in progress, and deterministic', () => {
-  assert(pressure(0, 10, 10) === 0, 'no pressure at the start with everyone alive');
-  assert(pressure(4, 0, 10) === 1, 'full pressure late with no hostiles left');
-  let last = -1;
-  for (let m = 0; m <= 4; m++) { const p = pressure(m, 5, 10); assert(p >= 0 && p <= 1); assert(p >= last, 'monotonic in mission index'); last = p; }
-  assert.equal(pressure(2, 3, 10), pressure(2, 3, 10));
-});
 test('fx: transient arrays stay bounded under sustained heavy use', () => {
   const fx = new FX();
   for (let i = 0; i < 3000; i++) {
@@ -968,6 +961,32 @@ test('world: collect takes each item and completes on the last', () => {
   g.player.x = 300; g.player.y = 200;
   WorldSystem.interact.call(g, false);
   assert.equal(level.objectives[1].taken, true); assert.equal(g.goalDone, true);
+});
+
+// ----------------------------------------------------------- difficulty
+test('difficulty: pressure spans the full 15-mission campaign', () => {
+  assert.equal(pressure(0, 10, 10), 0, 'no pressure at the start with everyone alive');
+  assert.equal(pressure(MISSION_COUNT - 1, 0, 10), 1, 'full pressure on the final mission with none alive');
+  let last = -1;
+  for (let m = 0; m < MISSION_COUNT; m++) { const p = pressure(m, 5, 10); assert(p >= 0 && p <= 1); assert(p >= last, 'monotonic in mission index'); last = p; }
+  assert.equal(pressure(2, 3, 10), pressure(2, 3, 10));
+});
+test('difficulty: phaseDifficulty scales reaction down, detect and score up', () => {
+  const d1 = phaseDifficulty(0), d2 = phaseDifficulty(1), d3 = phaseDifficulty(2);
+  assert(d1.reaction >= d2.reaction && d2.reaction >= d3.reaction, 'reaction should fall per phase');
+  assert(d1.detect <= d2.detect && d2.detect <= d3.detect, 'detection should rise per phase');
+  assert(d1.score <= d2.score && d2.score <= d3.score, 'score should rise per phase');
+  for (const d of [d1, d2, d3]) for (const k of ['reaction', 'detect', 'score']) assert(Number.isFinite(d[k]) && d[k] > 0, k);
+  assert.deepEqual(phaseDifficulty(99), d3, 'high clamps to the last phase');
+  assert.deepEqual(phaseDifficulty(-4), d1, 'low clamps to the first phase');
+});
+test('save: phase progress fields are repaired and round-trip', () => {
+  memStore['veildrive-save-v1'] = JSON.stringify({ version: 1 });
+  const s = loadSave();
+  assert.equal(s.highestPhase, 1); assert.equal(s.campaignsCleared, 0);
+  storeSave({ ...s, highestPhase: 2, campaignsCleared: 1 });
+  const s2 = loadSave();
+  assert.equal(s2.highestPhase, 2); assert.equal(s2.campaignsCleared, 1);
 });
 
 // --------------------------------------------------------------- report
