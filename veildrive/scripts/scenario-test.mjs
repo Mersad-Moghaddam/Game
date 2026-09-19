@@ -354,7 +354,7 @@ try {
     const real = g.input;
     g.input = { down: () => false, tap: () => false, endFrame() {}, mouse: { x: 900, y: 300, left: true, right: false, leftPressed: false, rightPressed: false, moved: true } };
     const out = {};
-    for (let mi = 0; mi < 5; mi++) {
+    for (let mi = 0; mi < 15; mi++) {
       g.startMission(mi, true);
       const gun = g.level.pickups.find(x => x.weapon.kind === 'gun');
       const melee = g.level.pickups.find(x => x.weapon.kind === 'melee');
@@ -406,8 +406,8 @@ try {
   ok('combat: an empty gun auto-reloads on held attack', autoReload.reloading, JSON.stringify(autoReload));
 
   // --- boss mission: jump to the finale, kill the boss, finish ---
-  await evalG(() => window.__VEILDRIVE__.startMission(4, true));
-  const bossStart = await waitFor(s => s.state === 'playing' && s.mi === 4, 5000);
+  await evalG(() => window.__VEILDRIVE__.startMission(14, true));
+  const bossStart = await waitFor(s => s.state === 'playing' && s.mi === 14, 5000);
   ok('boss: finale mission spawns the boss', bossStart.boss !== null, JSON.stringify(bossStart));
   await page.keyboard.press('F4');
   const bossDone = await waitFor(s => s.goalDone === true, 6000);
@@ -417,6 +417,66 @@ try {
   await page.keyboard.press('KeyE');
   const results = await waitFor(s => s.state === 'results', 12000);
   ok('campaign: completing the finale shows results', results.state === 'results' && results.results && results.results.missions >= 1, JSON.stringify(results.results));
+
+  // --- NG+ phase transition: clearing mission 5 opens the phase screen ---
+  await evalG(() => { const g = window.__VEILDRIVE__; g.runSeed = 7; g.startRun(); g.invincible = true; });
+  await evalG(() => window.__VEILDRIVE__.startMission(4, true));
+  await evalG(() => window.__VEILDRIVE__.completeGoal());
+  await evalG(() => { const g = window.__VEILDRIVE__; g.player.x = g.level.exit.x; g.player.y = g.level.exit.y; g.interact(false); });
+  const phaseScreen = await waitFor(s => s.state === 'interlude' || s.state === 'phase', 6000);
+  const afterPhaseScreen = await waitFor(s => s.state === 'phase', 6000);
+  ok('phase: clearing mission 5 enters the NEW GAME+ phase screen', afterPhaseScreen.state === 'phase', JSON.stringify(afterPhaseScreen));
+  const phaseInit = await evalG(() => ({ phaseIndex: window.__VEILDRIVE__.phaseIndex, phase: window.__VEILDRIVE__.phase && window.__VEILDRIVE__.phase.id }));
+  ok('phase: the run is still phase 1 before the upgrade', phaseInit.phaseIndex === 0 && phaseInit.phase === 'p1', JSON.stringify(phaseInit));
+  const upAfterPhase = await waitFor(s => s.state === 'upgrade', 9000);
+  ok('phase: the phase screen leads to an upgrade', upAfterPhase.state === 'upgrade', JSON.stringify(upAfterPhase));
+  const carriedWeapon = await evalG(() => window.__VEILDRIVE__.player.current.id);
+  await page.keyboard.press('Digit1');
+  const phase2 = await waitFor(s => s.state === 'playing' && s.mi === 5, 9000);
+  ok('phase: the next mission starts in phase 2 (mission 6)', phase2.mi === 5, JSON.stringify(phase2));
+  const phaseInfo = await evalG(() => ({ phaseIndex: window.__VEILDRIVE__.phaseIndex, phase: window.__VEILDRIVE__.phase && window.__VEILDRIVE__.phase.id, hp: window.__VEILDRIVE__.player.hp, weapon: window.__VEILDRIVE__.player.current.id }));
+  ok('phase: phase 2 is active and the loadout carried over', phaseInfo.phaseIndex === 1 && phaseInfo.phase === 'p2' && phaseInfo.hp === 5 && phaseInfo.weapon === carriedWeapon, JSON.stringify(phaseInfo));
+
+  // --- sabotage: arming every charge completes the goal ---
+  const sabotageDone = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(5, true);
+    const objs = g.level.objectives;
+    for (const o of objs) { g.player.x = o.x; g.player.y = o.y; g.interact(false); }
+    return { type: g.mission.goal.type, armed: objs.filter(o => o.armed).length, total: objs.length, goalDone: g.goalDone };
+  });
+  ok('sabotage: arming every charge completes the goal', sabotageDone.type === 'sabotage' && sabotageDone.armed === sabotageDone.total && sabotageDone.goalDone, JSON.stringify(sabotageDone));
+
+  // --- collect: taking every item completes the goal ---
+  const collectDone = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(8, true);
+    const objs = g.level.objectives;
+    for (const o of objs) { g.player.x = o.x; g.player.y = o.y; g.interact(false); }
+    return { type: g.mission.goal.type, taken: objs.filter(o => o.taken).length, total: objs.length, goalDone: g.goalDone };
+  });
+  ok('collect: taking every item completes the goal', collectDone.type === 'collect' && collectDone.taken === collectDone.total && collectDone.goalDone, JSON.stringify(collectDone));
+
+  // --- survive: reinforcements appear and the timer completes the goal ---
+  const surviveDone = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(7, true);
+    const start = g.enemies.filter(e => !e.dead).length;
+    for (let i = 0; i < 60 * 46; i++) g.step(1 / 60);
+    return { type: g.mission.goal.type, start, end: g.enemies.length, goalDone: g.goalDone, time: g.missionTime };
+  });
+  ok('survive: reinforcements spawn over time', surviveDone.type === 'survive' && surviveDone.end > surviveDone.start, JSON.stringify(surviveDone));
+  ok('survive: holding the timer completes the goal', surviveDone.goalDone === true && surviveDone.time >= 40, JSON.stringify(surviveDone));
+
+  // --- the full campaign reports 15 missions ---
+  const all15 = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startRun();
+    for (let i = 0; i < 15; i++) { g.startMission(i, true); g.completeGoal(); g.missionComplete(); }
+    g.finishCampaign();
+    return { cleared: g.missionsCleared, reported: g.results && g.results.missions, state: g.state };
+  });
+  ok('campaign: all 15 missions count toward the results', all15.cleared === 15 && all15.reported === 15 && all15.state === 'results', JSON.stringify(all15));
 
   // --- save persists across a reload ---
   await evalG(() => { const g = window.__VEILDRIVE__; g.save.highScore = 4242; g.save.bestRank = 'S'; localStorage.setItem('veildrive-save-v1', JSON.stringify(g.save)); });
