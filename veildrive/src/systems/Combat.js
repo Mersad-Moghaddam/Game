@@ -15,25 +15,70 @@ export const CombatSystem = {
     for (let n = 0; n < count; n++) {
       const aa = a + rand(-spread, spread);
       const speed = w.id === 'shotgun' ? 780 : 980;
-      const b = obtain(this._projFree, () => ({ x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, damage: 0, owner: 'player', life: 0, color: '#fff', ricochet: 0, pierce: 0, hitSet: null }));
+      const b = obtain(this._projFree, () => ({ x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, damage: 0, owner: 'player', fromPlayer: true, life: 0, color: '#fff', ricochet: 0, pierce: 0, hitSet: null }));
       b.x = shooter.x + Math.cos(aa) * 22; b.y = shooter.y + Math.sin(aa) * 22; b.px = shooter.x; b.py = shooter.y; b.vx = Math.cos(aa) * speed; b.vy = Math.sin(aa) * speed;
-      b.damage = enemy ? w.damage : w.damage * (this.player.damageMul || 1); b.owner = enemy ? 'enemy' : 'player'; b.life = (w.range || 800) / speed; b.color = enemy ? '#ee8d55' : '#f4cf7a';
+      b.damage = enemy ? w.damage : w.damage * (this.player.damageMul || 1); b.owner = enemy ? 'enemy' : 'player'; b.fromPlayer = !enemy; b.life = (w.range || 800) / speed; b.color = enemy ? '#ee8d55' : '#f4cf7a';
       b.ricochet = !enemy && this.player.ricochet ? 1 : 0; b.pierce = enemy ? 0 : ((this.player.pierce || 0) + (w.pen || 0));
       if (enemy) b.hitSet = null; else { b.hitSet = b.hitSet || []; b.hitSet.length = 0; }
       this.projectiles.push(b);
     }
     const fs = w.flash || 1, sx = shooter.x + Math.cos(a) * 25, sy = shooter.y + Math.sin(a) * 25;
-    this.fx.flash(sx, sy, (w.id === 'shotgun' ? 95 : 55) * fs, '#ffd28c', .07);
+    this.fx.flash(sx, sy, (w.id === 'shotgun' ? 100 : w.id === 'rifle' ? 80 : 55) * fs, '#ffd28c', .07);
     this.fx.burst(sx, sy, w.id === 'shotgun' ? 14 : 6, '#e5b86e', 120, .22, 2);
-    if (!enemy) { this.fx.smoke(sx, sy, a); if (w.casing) this.fx.casing(shooter.x, shooter.y, a); }
+    if (!enemy) {
+      this.fx.smoke(sx, sy, a);
+      if (w.casing) {
+        const kind = w.id === 'shotgun' ? 'shotgun' : (w.id === 'rifle' ? 'rifle' : 'pistol');
+        this.fx.casing(shooter.x, shooter.y, a, kind);
+      }
+    }
     this.emitNoise(shooter.x, shooter.y, w.noise, 'gunshot');
     this.shake(enemy ? (dist(shooter, this.player) < 420 ? 1.6 : 0) : (w.id === 'shotgun' ? 9 : w.id === 'revolver' ? 6 : 3.5));
     this.audio.play(w.id === 'shotgun' ? 'shotgun' : w.id === 'suppressed' ? 'suppressed' : 'shot');
+  },
+  spawnProjectile(x, y, a, speed = 800, damage = 1, fromPlayer = false, ricochet = false, pierce = 0) {
+    const b = obtain(this._projFree, () => ({ x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, damage: 0, owner: 'player', fromPlayer: true, life: 0, color: '#fff', ricochet: 0, pierce: 0, hitSet: null }));
+    b.x = x; b.y = y; b.px = x; b.py = y;
+    b.vx = Math.cos(a) * speed; b.vy = Math.sin(a) * speed;
+    b.damage = damage;
+    b.owner = fromPlayer ? 'player' : 'enemy';
+    b.fromPlayer = !!fromPlayer;
+    b.life = 800 / speed;
+    b.color = fromPlayer ? '#f4cf7a' : '#ee8d55';
+    b.ricochet = ricochet ? 1 : 0;
+    b.pierce = pierce || 0;
+    b.hitSet = fromPlayer ? [] : null;
+    this.projectiles.push(b);
+    return b;
   },
   enemyShoot(e, w, a) { this.fireWeapon(e, w, a); },
   enemyMelee(e, p) { this.fx.burst(p.x, p.y, 7, '#d0c9ac', 110, .25, 3); if (!this.invincible) p.damage(1, this, e.a); this.shake(6); this.audio.play('melee'); },
   meleeAttack(attacker, w, a) {
     this.weaponKinds.add(w.id); let hit = false;
+    if (w.parry && this.projectiles) {
+      const parryRange = (w.range || 48) + 16;
+      const parryArc = (w.arc || 1.35) * 0.55;
+      for (const p of this.projectiles) {
+        if (p.life <= 0 || p.fromPlayer || p.owner === 'player') continue;
+        const d = dist(attacker, p);
+        const da = Math.abs(angleDiff(a, Math.atan2(p.y - attacker.y, p.x - attacker.x)));
+        if (d <= parryRange && da <= parryArc) {
+          p.fromPlayer = true;
+          p.owner = 'player';
+          p.color = '#12e0ff';
+          const speed = Math.max(Math.hypot(p.vx, p.vy) * 1.2, 500);
+          p.vx = Math.cos(a) * speed;
+          p.vy = Math.sin(a) * speed;
+          p.px = p.x; p.py = p.y;
+          p.life = Math.max(p.life, 0.8);
+          p.hitSet = [];
+          p.damage = Math.max(p.damage, (w.damage || 3) * (this.player?.damageMul || 1));
+          this.fx?.burst?.(p.x, p.y, 8, '#12e0ff', 180, 0.25, 3);
+          this.audio?.play?.('hit');
+          hit = true;
+        }
+      }
+    }
     for (const e of this.enemies) {
       if (e.dead) continue;
       const d = dist(attacker, e), da = Math.abs(angleDiff(a, Math.atan2(e.y - attacker.y, e.x - attacker.x)));
@@ -101,7 +146,7 @@ export const CombatSystem = {
         else b.life = 0;
       }
       if (b.life <= 0) continue;
-      if (b.owner === 'player') {
+      if (b.owner === 'player' || b.fromPlayer) {
         for (const e of this.enemies) {
           if (e.dead || (b.hitSet && b.hitSet.includes(e))) continue;
           if (pointSegDist(e.x, e.y, ox, oy, b.x, b.y) < e.r) {
@@ -112,7 +157,7 @@ export const CombatSystem = {
         if (b.life > 0 && this.boss && !this.boss.dead && pointSegDist(this.boss.x, this.boss.y, ox, oy, b.x, b.y) < this.boss.r) {
           this.boss.damage(b.damage, this, Math.atan2(b.vy, b.vx)); this.hits++; b.life = 0;
         }
-      } else if (!this.player.dead && pointSegDist(this.player.x, this.player.y, ox, oy, b.x, b.y) < this.player.r) {
+      } else if (!b.fromPlayer && !this.player.dead && pointSegDist(this.player.x, this.player.y, ox, oy, b.x, b.y) < this.player.r) {
         if (!this.invincible) this.player.damage(b.damage, this, Math.atan2(b.vy, b.vx));
         b.life = 0;
       }

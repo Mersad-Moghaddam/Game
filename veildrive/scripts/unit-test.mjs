@@ -14,6 +14,7 @@ import { MISSIONS, MISSION_COUNT, PHASES, PHASE_COUNT, MISSIONS_PER_PHASE, phase
 import { goalReached } from '../src/core/goals.js';
 import { Level } from '../src/world/Level.js';
 import { WorldSystem } from '../src/systems/World.js';
+import { CombatSystem } from '../src/systems/Combat.js';
 import { FX } from '../src/systems/FX.js';
 import { Player } from '../src/entities/Player.js';
 import { Enemy } from '../src/entities/Enemy.js';
@@ -1035,6 +1036,176 @@ test('save: phase progress fields are repaired and round-trip', () => {
   storeSave({ ...s, highestPhase: 2, campaignsCleared: 1 });
   const s2 = loadSave();
   assert.equal(s2.highestPhase, 2); assert.equal(s2.campaignsCleared, 1);
+});
+
+// ------------------------------------------------------------- combat mechanics & FX
+function makeTestGame() {
+  const p = new Player(100, 100);
+  const g = {
+    player: p,
+    enemies: [],
+    boss: null,
+    projectiles: [],
+    _projFree: [],
+    thrown: [],
+    hazards: [],
+    weaponKinds: new Set(),
+    shots: 0,
+    hits: 0,
+    score: 0,
+    killCount: 0,
+    stealthKills: 0,
+    level: { props: [], blocked: () => false, bulletHit: () => null, moveCircle(e, dx, dy) { e.x += dx; e.y += dy; }, pickups: [] },
+    fx: new FX(),
+    audio: { play() {} },
+    shake() {},
+    hitStop() {},
+    emitNoise() {},
+    addCombo() {},
+  };
+  Object.assign(g, CombatSystem);
+  return g;
+}
+
+test('combat: katana parry deflects hostile projectile away from player', () => {
+  const g = makeTestGame();
+  g.player.equip(makeWeapon('katana'), g);
+  // Hostile projectile heading left toward player
+  const p = g.spawnProjectile(g.player.x + 30, g.player.y, Math.PI, 400, 1, false, false, 0);
+  assert.equal(p.fromPlayer, false);
+  assert(p.vx < 0, 'projectile initially moving toward player');
+  g.meleeAttack(g.player, g.player.current, 0);
+  assert.equal(p.fromPlayer, true, 'deflected projectile must be marked fromPlayer');
+  assert.equal(p.owner, 'player', 'deflected projectile owner must be player');
+  assert(p.vx > 0, 'deflected projectile velocity should be directed away along swing angle');
+  assert.equal(p.color, '#12e0ff', 'deflected projectile turns neon cyan');
+});
+
+test('combat: burst rifle queues remaining burst shots over time', () => {
+  const p = new Player(0, 0);
+  const fired = [];
+  const g = stubGame(p);
+  g.fireWeapon = (shooter, w, a) => { fired.push({ shooter, w, a }); };
+  p.equip(makeWeapon('rifle'), g);
+  assert.equal(p.current.burstCount, 3);
+  const initialAmmo = p.current.ammo;
+  p.shoot(g);
+  assert.equal(fired.length, 1, 'first shot fired immediately');
+  assert.equal(p.current.ammo, initialAmmo - 1);
+  assert.equal(p.burstQueue, 2, '2 burst shots remaining in queue');
+  // Advance time past first burst rate interval
+  p.update(0.07, g);
+  assert.equal(fired.length, 2, 'second burst shot fired after timer');
+  assert.equal(p.burstQueue, 1);
+  assert.equal(p.current.ammo, initialAmmo - 2);
+  // Advance time past second burst rate interval
+  p.update(0.07, g);
+  assert.equal(fired.length, 3, 'third burst shot fired');
+  assert.equal(p.burstQueue, 0);
+  assert.equal(p.current.ammo, initialAmmo - 3);
+});
+
+test('fx: shell casings support caliber-specific kinds (shotgun, rifle, pistol)', () => {
+  const fx = new FX();
+  fx.casing(10, 20, 0, 'shotgun');
+  assert.equal(fx.casings[0].kind, 'shotgun');
+  fx.casing(10, 20, 0, 'rifle');
+  assert.equal(fx.casings[1].kind, 'rifle');
+  fx.casing(10, 20, 0);
+  assert.equal(fx.casings[2].kind, 'pistol');
+});
+
+test('combat: parried projectile hits enemy and does not damage player', () => {
+  const g = makeTestGame();
+  g.player.equip(makeWeapon('katana'), g);
+  const enemy = new Enemy(g.player.x + 80, g.player.y, 'guard', []);
+  g.enemies.push(enemy);
+  const p = g.spawnProjectile(g.player.x + 30, g.player.y, Math.PI, 400, 1, false, false, 0);
+  g.meleeAttack(g.player, g.player.current, 0);
+  assert.equal(p.fromPlayer, true);
+  // Advance simulation to let projectile reach enemy
+  g.updateProjectiles(0.1);
+  assert.equal(enemy.dead, true, 'deflected projectile should damage and kill enemy');
+  assert.equal(g.player.hp, 5, 'deflected projectile must not damage the player');
+});
+
+test('combat: non-parry weapons and out-of-arc/range attacks do not deflect projectiles', () => {
+  const g = makeTestGame();
+  // Case 1: non-parry weapon (baton)
+  g.player.equip(makeWeapon('baton'), g);
+  const p1 = g.spawnProjectile(g.player.x + 30, g.player.y, Math.PI, 400, 1, false, false, 0);
+  g.meleeAttack(g.player, g.player.current, 0);
+  assert.equal(p1.fromPlayer, false, 'baton should not deflect');
+
+  // Case 2: katana with projectile behind player (outside swing arc)
+  g.player.equip(makeWeapon('katana'), g);
+  const p2 = g.spawnProjectile(g.player.x - 30, g.player.y, 0, 400, 1, false, false, 0);
+  g.meleeAttack(g.player, g.player.current, 0); // swing facing right (angle 0)
+  assert.equal(p2.fromPlayer, false, 'projectile behind player should not be deflected');
+
+  // Case 3: projectile too far away (outside range)
+  const p3 = g.spawnProjectile(g.player.x + 120, g.player.y, Math.PI, 400, 1, false, false, 0);
+  g.meleeAttack(g.player, g.player.current, 0);
+  assert.equal(p3.fromPlayer, false, 'projectile out of range should not be deflected');
+});
+
+test('combat: burst fire aborts if magazine empties or weapon is swapped/reloaded', () => {
+  const p = new Player(0, 0);
+  const fired = [];
+  const g = stubGame(p);
+  g.fireWeapon = (shooter, w, a) => { fired.push({ shooter, w, a }); };
+  p.equip(makeWeapon('rifle'), g);
+  p.current.ammo = 1; // Only 1 bullet left
+  p.shoot(g);
+  assert.equal(fired.length, 1);
+  assert.equal(p.burstQueue, 0, 'burst should not queue more than available ammo');
+
+  // Test swap cancels burst
+  p.equip(makeWeapon('rifle'), g);
+  p.shoot(g);
+  assert.equal(p.burstQueue, 2);
+  p.swap(g);
+  assert.equal(p.burstQueue, 0, 'swap should cancel burst queue');
+
+  // Test reload cancels burst
+  p.equip(makeWeapon('rifle'), g);
+  p.shoot(g);
+  assert.equal(p.burstQueue, 2);
+  p.reload(g);
+  assert.equal(p.burstQueue, 0, 'reload should cancel burst queue');
+});
+
+test('fx: casings render distinct visual geometry for shotgun, rifle, and pistol', () => {
+  const fx = new FX();
+  fx.casing(0, 0, 0, 'shotgun');
+  fx.casing(0, 0, 0, 'rifle');
+  fx.casing(0, 0, 0, 'pistol');
+  const fills = [];
+  let currentFill = '';
+  const base = recordingCtx();
+  const ctx = {
+    ...base,
+    calls: base.calls,
+    set fillStyle(v) { currentFill = v; fills.push(v); },
+    get fillStyle() { return currentFill; }
+  };
+  fx.draw(ctx);
+  // Shotgun should use red hull (#c8102e) and gold rim (#e0b258)
+  assert(fills.includes('#c8102e'), 'shotgun red hull rendered');
+  assert(fills.includes('#e0b258'), 'shotgun gold rim rendered');
+  // Rifle should use rifle brass (#d4af37)
+  assert(fills.includes('#d4af37'), 'rifle brass rendered');
+  // Pistol should use standard brass (#c9a24a)
+  assert(fills.includes('#c9a24a'), 'pistol standard brass rendered');
+});
+
+test('fx: muzzleFlash creates transient flash registered in fx.flashes', () => {
+  const fx = new FX();
+  fx.muzzleFlash(50, 60, 80, '#ffd28c', 0.07);
+  assert.equal(fx.flashes.length, 1);
+  assert.equal(fx.flashes[0].x, 50);
+  assert.equal(fx.flashes[0].y, 60);
+  assert.equal(fx.flashes[0].r, 80);
 });
 
 // --------------------------------------------------------------- report

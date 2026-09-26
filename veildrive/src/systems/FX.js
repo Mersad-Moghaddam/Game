@@ -4,7 +4,7 @@ import { compact } from '../core/Pool.js';
 const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
 const NEON = new Set(['#12e0ff', '#ff2e88', '#ff7a1a', '#c6ff2e', '#8b2bff', '#ff1e9c']);
 const newParticle = () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, max: .5, size: 3, color: '#fff', glow: false });
-const newCasing = () => ({ x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, life: 0 });
+const newCasing = () => ({ x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, life: 0, kind: 'pistol' });
 const newLimb = () => ({ x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, life: 0, kind: 'arm' });
 export class FX {
   constructor() {
@@ -42,9 +42,10 @@ export class FX {
   markAllPainted() { for (const d of this.decals) d.painted = true; for (const c of this.corpses) c.painted = true; }
   unpaintedCount() { let n = 0; for (const d of this.decals) if (!d.painted) n++; for (const c of this.corpses) if (!c.painted) n++; return n; }
   flash(x, y, r, color = '#f6c37a', life = .07) { if (this.flashes.length >= 90) this._flashFree.push(this.flashes.shift()); const f = this._flashFree.pop() || { x: 0, y: 0, r: 0, color, life: 0, max: 0 }; f.x = x; f.y = y; f.r = r; f.color = color; f.life = life; f.max = life; this.flashes.push(f); }
+  muzzleFlash(x, y, r = 60, color = '#ffd28c', life = .07) { return this.flash(x, y, r, color, life); }
   ring(x, y, color = '#ff2e88', max = 90, life = .34) { if (this.rings.length >= 40) this._ringFree.push(this.rings.shift()); const r = this._ringFree.pop() || { x: 0, y: 0, color, max: 0, life: 0, maxLife: 0 }; r.x = x; r.y = y; r.color = color; r.max = max; r.life = life; r.maxLife = life; this.rings.push(r); }
   ghost(x, y, a) { if (this.after.length >= 60) this._afterFree.push(this.after.shift()); const o = this._afterFree.pop() || { x: 0, y: 0, a: 0, life: 0 }; o.x = x; o.y = y; o.a = a; o.life = .18; this.after.push(o); }
-  casing(x, y, a) { if (this.casings.length >= 140) this._casingFree.push(this.casings.shift()); const side = rng.chance(.5) ? 1 : -1, ea = a + Math.PI / 2 * side; const c = this._newCasing(); c.x = x; c.y = y; c.vx = Math.cos(a) * rand(20, 60) + Math.cos(ea) * rand(70, 140); c.vy = Math.sin(a) * rand(20, 60) + Math.sin(ea) * rand(70, 140); c.a = rand(0, 6.283); c.spin = rand(-16, 16); c.life = rand(.8, 1.4); }
+  casing(x, y, a, kind = 'pistol') { if (this.casings.length >= 140) this._casingFree.push(this.casings.shift()); const side = rng.chance(.5) ? 1 : -1, ea = a + Math.PI / 2 * side; const c = this._newCasing(); c.x = x; c.y = y; c.vx = Math.cos(a) * rand(20, 60) + Math.cos(ea) * rand(70, 140); c.vy = Math.sin(a) * rand(20, 60) + Math.sin(ea) * rand(70, 140); c.a = rand(0, 6.283); c.spin = rand(-16, 16); c.life = rand(.8, 1.4); c.kind = kind; }
   smoke(x, y, a) { const n = 2 + rng.int(2); for (let i = 0; i < n; i++) { const p = this._newP(); p.x = x; p.y = y; p.vx = Math.cos(a) * rand(25, 70) + rand(-18, 18); p.vy = Math.sin(a) * rand(25, 70) + rand(-18, 18); p.life = rand(.3, .6); p.max = .6; p.size = rand(2, 4.5); p.color = '#8a8a92'; p.glow = false; } }
   update(dt) {
     for (const p of this.p) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= Math.pow(.1, dt); p.vy *= Math.pow(.1, dt); p.life -= dt; }
@@ -74,7 +75,26 @@ export class FX {
       else { ctx.fillStyle = '#7a0018'; ctx.fillRect(-(head ? 4 : 6), -2, (head ? 8 : 12), 4); ctx.fillStyle = '#d8a07a'; ctx.fillRect(head ? 4 : 6, -2, 3, 4); }
       ctx.restore();
     }
-    ctx.fillStyle = '#c9a24a'; for (const c of this.casings) { if (c.life < .2) continue; ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a); ctx.fillRect(-1.6, -1, 3.2, 2); ctx.restore(); } for (const a of this.after) { ctx.globalAlpha = a.life / .18 * .22; ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(a.a); ctx.fillStyle = '#12e0ff'; ctx.fillRect(-10, -7, 20, 14); ctx.restore(); } for (const p of this.p) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); } ctx.globalAlpha = 1;
+    for (const c of this.casings) {
+      if (c.life < .2) continue;
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.a);
+      if (c.kind === 'shotgun') {
+        ctx.fillStyle = '#c8102e';
+        ctx.fillRect(-1, -1.2, 3.4, 2.4);
+        ctx.fillStyle = '#e0b258';
+        ctx.fillRect(-2.4, -1.2, 1.4, 2.4);
+      } else if (c.kind === 'rifle') {
+        ctx.fillStyle = '#d4af37';
+        ctx.fillRect(-2.5, -0.9, 5.0, 1.8);
+      } else {
+        ctx.fillStyle = '#c9a24a';
+        ctx.fillRect(-1.6, -1, 3.2, 2);
+      }
+      ctx.restore();
+    }
+    for (const a of this.after) { ctx.globalAlpha = a.life / .18 * .22; ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(a.a); ctx.fillStyle = '#12e0ff'; ctx.fillRect(-10, -7, 20, 14); ctx.restore(); } for (const p of this.p) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); } ctx.globalAlpha = 1;
   }
   drawGlow(ctx) {
     for (const f of this.flashes) {
