@@ -522,11 +522,36 @@ function recordingCtx() {
     globalAlpha: 1, lineWidth: 1 };
 }
 test('art: every weapon draws a distinct silhouette without throwing', () => {
-  for (const id of ['fists', 'baton', 'cleaver', 'bottle', 'pistol', 'suppressed', 'shotgun', 'smg', 'revolver']) {
+  for (const id of Object.keys(WEAPONS)) {
     const ctx = recordingCtx();
     drawWeaponArt(ctx, makeWeapon(id), 1, '#e0a97f');
     assert(ctx.calls.length > 0, `${id} drew nothing`);
   }
+});
+test('art: drawWeaponArt executes with mock canvas context for all weapons including katana and rifle', () => {
+  const mockCtx = {
+    save: () => {}, restore: () => {}, scale: () => {}, translate: () => {}, rotate: () => {},
+    beginPath: () => {}, moveTo: () => {}, lineTo: () => {}, arc: () => {}, closePath: () => {},
+    fill: () => {}, stroke: () => {}, strokeRect: () => {}, fillRect: () => {}
+  };
+  for (const id of Object.keys(WEAPONS)) {
+    drawWeaponArt(mockCtx, WEAPONS[id], 1);
+  }
+});
+test('art: katana and rifle have dedicated silhouettes and do not fall back to default', () => {
+  const fallbackCtx = recordingCtx();
+  drawWeaponArt(fallbackCtx, { id: 'unknown_test_weapon', color: '#fff' }, 1);
+  const fallbackCount = fallbackCtx.calls.length;
+
+  const katanaCtx = recordingCtx();
+  drawWeaponArt(katanaCtx, makeWeapon('katana'), 1);
+  assert(katanaCtx.calls.length > 0, 'katana drew nothing');
+  assert.notEqual(katanaCtx.calls.length, fallbackCount, 'katana must not fall back to default pistol art');
+
+  const rifleCtx = recordingCtx();
+  drawWeaponArt(rifleCtx, makeWeapon('rifle'), 1);
+  assert(rifleCtx.calls.length > 0, 'rifle drew nothing');
+  assert.notEqual(rifleCtx.calls.length, fallbackCount, 'rifle must not fall back to default pistol art');
 });
 test('art: unknown weapon falls back without throwing', () => {
   const ctx = recordingCtx();
@@ -580,10 +605,10 @@ test('character: lower HP draws more damage wear', () => {
 
 test('art: weapon silhouettes are distinct per type', () => {
   const counts = new Set();
-  for (const id of ['fists', 'baton', 'cleaver', 'bottle', 'pistol', 'suppressed', 'shotgun', 'smg', 'revolver']) {
+  for (const id of Object.keys(WEAPONS)) {
     const ctx = recordingCtx(); drawWeaponArt(ctx, makeWeapon(id), 1); counts.add(ctx.calls.length);
   }
-  assert(counts.size >= 5, `weapons should not share silhouettes (distinct call counts: ${counts.size})`);
+  assert(counts.size >= 6, `weapons should not share silhouettes (distinct call counts: ${counts.size})`);
 });
 test('nav: A* routes around a wall to reach the far side', () => {
   const def = {
