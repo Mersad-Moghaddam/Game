@@ -405,10 +405,191 @@ try {
   });
   ok('combat: an empty gun auto-reloads on held attack', autoReload.reloading, JSON.stringify(autoReload));
 
+  // --- katana: equips, swings, and deflects projectile ---
+  const katana = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(0, true);
+    const pickup = g.level.pickups.find(p => p.weapon && p.weapon.id === 'katana');
+    if (!pickup) return { skipped: true, reason: 'no pickup' };
+    g.player.equip(pickup.weapon, g);
+    const equipped = g.player.current.id === 'katana' && g.player.current.parry === true;
+
+    g.player.x = 400; g.player.y = 400; g.player.a = 0;
+    g.player.attackCd = 0;
+    const s0 = g.player.meleeSwings || 0;
+
+    const bullet = {
+      x: g.player.x + 36, y: g.player.y,
+      px: g.player.x + 36, py: g.player.y,
+      vx: -400, vy: 0,
+      damage: 1, life: 1.0, r: 3,
+      owner: 'enemy', fromPlayer: false,
+      color: '#ff3344', hitSet: null
+    };
+    g.projectiles.push(bullet);
+
+    g.player.melee(g);
+    const swung = (g.player.meleeSwings || 0) > s0;
+
+    return {
+      equipped,
+      swung,
+      deflected: bullet.fromPlayer === true && bullet.owner === 'player' && bullet.color === '#12e0ff' && bullet.vx > 0,
+      damageBoosted: bullet.damage >= 3
+    };
+  });
+  ok('weapons: katana equips, performs swing, and deflects projectile', katana.skipped || (katana.equipped && katana.swung && katana.deflected && katana.damageBoosted), JSON.stringify(katana));
+
+  // --- burst rifle: 3-round burst consumes 3 ammo across burst rate ticks ---
+  const burst = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(2, true);
+    const pickup = g.level.pickups.find(p => p.weapon && p.weapon.id === 'rifle');
+    if (!pickup) return { skipped: true, reason: 'no pickup' };
+    g.player.equip(pickup.weapon, g);
+    const equipped = g.player.current.id === 'rifle' && g.player.current.burstCount === 3;
+
+    g.player.attackCd = 0; g.player.reloadT = 0;
+    if (g.input && g.input.mouse) {
+      g.input.mouse.left = false;
+      g.input.mouse.leftPressed = false;
+    }
+    const startAmmo = g.player.current.ammo;
+
+    g.player.shoot(g);
+    const afterShoot = { ammo: g.player.current.ammo, queue: g.player.burstQueue };
+
+    g.player.update(0.07, g);
+    const tick1 = { ammo: g.player.current.ammo, queue: g.player.burstQueue };
+
+    g.player.update(0.07, g);
+    const tick2 = { ammo: g.player.current.ammo, queue: g.player.burstQueue };
+
+    return {
+      equipped,
+      startAmmo,
+      afterShoot,
+      tick1,
+      tick2,
+      totalConsumed: startAmmo - g.player.current.ammo
+    };
+  });
+  ok('weapons: tactical burst rifle fires 3-round burst consuming 3 ammo across burst ticks', burst.skipped || (
+    burst.equipped &&
+    burst.afterShoot.ammo === burst.startAmmo - 1 &&
+    burst.afterShoot.queue === 2 &&
+    burst.tick1.ammo === burst.startAmmo - 2 &&
+    burst.tick1.queue === 1 &&
+    burst.tick2.ammo === burst.startAmmo - 3 &&
+    burst.tick2.queue === 0 &&
+    burst.totalConsumed === 3
+  ), JSON.stringify(burst));
+
+  // --- breaker box: gunfire triggers electrical arc explosion and stuns nearby enemies ---
+  const breaker = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    g.startMission(0, true);
+    const b = g.level.props.find(p => p.type === 'breaker' && !p.broken);
+    if (!b) return { skipped: true, reason: 'no breaker found' };
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+
+    const nearbyEnemy = g.enemies.find(e => !e.dead);
+    if (!nearbyEnemy) return { skipped: true, reason: 'no enemy found' };
+    nearbyEnemy.x = cx + 60; nearbyEnemy.y = cy; nearbyEnemy.stun = 0; nearbyEnemy.dead = false;
+    nearbyEnemy.state = 'PATROL';
+
+    const farEnemy = g.enemies.find(e => !e.dead && e !== nearbyEnemy);
+    if (farEnemy) {
+      farEnemy.x = cx + 340; farEnemy.y = cy; farEnemy.stun = 0; farEnemy.dead = false;
+    }
+
+    const ox = b.x + b.w / 2, oy = b.y + 45;
+    g.projectiles.push({
+      x: ox, y: oy, px: ox, py: oy,
+      vx: 0, vy: -600,
+      damage: 1, life: 1, r: 3,
+      owner: 'player', fromPlayer: true,
+      color: '#ffe875'
+    });
+
+    const p0 = g.fx.p.length;
+    g.updateProjectiles(0.08);
+    const hasArcFx = g.fx.p.slice(p0).some(p => p.color === '#12e0ff');
+
+    return {
+      broken: b.broken,
+      stunned: nearbyEnemy.stun >= 1.0,
+      farStunned: farEnemy ? farEnemy.stun > 0 : false,
+      hasArcFx
+    };
+  });
+  ok('items: breaker box triggers on gunfire, arcs and stuns nearby enemies', breaker.skipped || (
+    breaker.broken &&
+    breaker.stunned &&
+    !breaker.farStunned &&
+    breaker.hasArcFx
+  ), JSON.stringify(breaker));
+
   // --- boss mission: jump to the finale, kill the boss, finish ---
   await evalG(() => window.__VEILDRIVE__.startMission(14, true));
   const bossStart = await waitFor(s => s.state === 'playing' && s.mi === 14, 5000);
   ok('boss: finale mission spawns the boss', bossStart.boss !== null, JSON.stringify(bossStart));
+
+  // --- boss: The Porter multi-phase mechanics, wall collision shockwave in phase 2, and vulnerability window ---
+  const porter = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    const b = g.boss;
+    if (!b) return { skipped: true, reason: 'no boss' };
+
+    // Multi-phase progression & visual accents
+    b.hp = 16;
+    const p1 = { phase: b.phase, accent: b.accent() };
+
+    b.hp = 10;
+    const p2 = { phase: b.phase, accent: b.accent() };
+
+    b.hp = 5;
+    const p3 = { phase: b.phase, accent: b.accent() };
+
+    // Phase 2 wall collision shockwave
+    b.hp = 8;
+    b.mode = 'charge';
+    b.stun = 0;
+    b.x = 20; b.y = 200; b.a = Math.PI; // into level boundary wall
+    const ringsBefore = g.fx.rings.length;
+    b.update(1 / 60, g);
+    const stunnedOnWall = b.mode === 'stunned' && b.stun > 1.0;
+    const newRing = g.fx.rings.slice(ringsBefore).find(r => r.color === '#ff7a1a' && r.max === 140);
+    const shockwaveCreated = !!newRing;
+
+    // Vulnerability window in Phase 3
+    b.hp = 5; b.mode = 'gun'; b.stun = 0;
+    b.damage(2, g);
+    const normalDmgP3 = 5 - b.hp; // resists: 2 * 0.35 = 0.70
+
+    b.stun = 1.2; // vulnerability window active
+    const hpBeforeStunDmg = b.hp;
+    b.damage(2, g);
+    const vulnerableDmgP3 = hpBeforeStunDmg - b.hp; // full damage: 2.0
+
+    // Reset boss so subsequent test flow is pristine
+    b.hp = 16; b.dead = false; b.stun = 0; b.mode = 'gun';
+
+    return {
+      phases: p1.phase === 1 && p2.phase === 2 && p3.phase === 3,
+      accents: p1.accent !== p2.accent && p2.accent !== p3.accent,
+      stunnedOnWall,
+      shockwaveCreated,
+      vulnerabilityWindowWorks: vulnerableDmgP3 > normalDmgP3 && Math.abs(vulnerableDmgP3 - 2) < 1e-4
+    };
+  });
+  ok('boss: The Porter multi-phase mechanics, wall collision shockwave in phase 2, and vulnerability window', porter.skipped || (
+    porter.phases &&
+    porter.accents &&
+    porter.stunnedOnWall &&
+    porter.shockwaveCreated &&
+    porter.vulnerabilityWindowWorks
+  ), JSON.stringify(porter));
   await page.keyboard.press('F4');
   const bossDone = await waitFor(s => s.goalDone === true, 6000);
   ok('boss: defeating the boss unlocks the exit', bossDone.goalDone && bossDone.exitActive);
