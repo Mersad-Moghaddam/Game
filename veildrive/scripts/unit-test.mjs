@@ -513,7 +513,7 @@ test('fx: rings are capped and expire', () => {
 
 // ------------------------------------------------- weapon art & chars
 import { drawWeaponArt } from '../src/render/weapons-art.js';
-import { CHARACTERS, facingView, poseJoints, drawCharacter } from '../src/render/character.js';
+import { CHARACTERS, facingView, poseJoints, drawCharacter, drawLaserSight } from '../src/render/character.js';
 function recordingCtx() {
   const calls = [];
   const noop = name => (...a) => { calls.push(name); };
@@ -602,6 +602,79 @@ test('character: lower HP draws more damage wear', () => {
   const full = recordingCtx(); drawCharacter(full, { archetype: 'guard', facing: 0, hpFrac: 1 });
   const hurt = recordingCtx(); drawCharacter(hurt, { archetype: 'guard', facing: 0, hpFrac: 0.1 });
   assert(hurt.calls.length > full.calls.length, 'blood wear should add drawing work');
+});
+test('character: renders across all archetypes and accessories without throwing', () => {
+  const mockCtx = recordingCtx();
+  for (const arch of ['moth0', 'guard', 'brawler', 'shotgunner', 'hunter', 'elite', 'porter']) {
+    drawCharacter(mockCtx, { archetype: arch, pose: 'aim', facing: 0, x: 100, y: 100 });
+  }
+  assert(mockCtx.calls.length > 0);
+});
+test('character: archetypes have specialized visual accessories and gear flags', () => {
+  assert.equal(CHARACTERS.brawler.gear.wraps, true, 'brawler has forearm wraps');
+  assert.equal(CHARACTERS.brawler.gear.knuckles, true, 'brawler has brass knuckles');
+  assert.equal(CHARACTERS.brawler.build.hunched, true, 'brawler has hunched aggressive stance');
+  assert.equal(CHARACTERS.shotgunner.gear.bandolier, true, 'shotgunner has diagonal shell bandolier');
+  assert.equal(CHARACTERS.hunter.gear.optic, true, 'hunter has cybernetic targeting optic');
+  assert.equal(CHARACTERS.hunter.gear.laserSight, true, 'hunter has laser sight telegraph');
+  assert.equal(CHARACTERS.elite.gear.exoPlates, true, 'elite has layered exo-armor plates');
+});
+test('character: brawler stance is hunched and aggressive compared to default', () => {
+  const guardJoints = poseJoints('idle', 0, 'side', CHARACTERS.guard.build);
+  const brawlerJoints = poseJoints('idle', 0, 'side', CHARACTERS.brawler.build);
+  assert(brawlerJoints.chest > guardJoints.chest, 'brawler torso should lean forward');
+});
+test('character: drawLaserSight renders a visible telegraph beam', () => {
+  assert.equal(typeof drawLaserSight, 'function');
+  const ctx = recordingCtx();
+  drawLaserSight(ctx, { x: 50, y: 50, angle: 0, length: 150, color: '#ff2244' });
+  assert(ctx.calls.includes('beginPath') && ctx.calls.includes('stroke'), 'laser sight must stroke path');
+});
+test('character: hunter aiming draws laser sight telegraph', () => {
+  const idleCtx = recordingCtx();
+  drawCharacter(idleCtx, { archetype: 'hunter', pose: 'idle', facing: 0, x: 100, y: 100 });
+  const aimCtx = recordingCtx();
+  drawCharacter(aimCtx, { archetype: 'hunter', pose: 'aim', facing: 0, x: 100, y: 100 });
+  assert(aimCtx.calls.length > idleCtx.calls.length, 'hunter aim should render laser sight telegraph');
+});
+test('character: elite hurt draws damage spall sparks', () => {
+  const normalCtx = recordingCtx();
+  drawCharacter(normalCtx, { archetype: 'elite', pose: 'idle', facing: 0, x: 100, y: 100 });
+  const hurtCtx = recordingCtx();
+  drawCharacter(hurtCtx, { archetype: 'elite', pose: 'hurt', facing: 0, x: 100, y: 100 });
+  assert(hurtCtx.calls.length > normalCtx.calls.length, 'elite hurt should produce spall sparks');
+});
+test('character: upright orientation invariant preserved when facing left or right', () => {
+  const right = drawCharacter(recordingCtx(), { archetype: 'moth0', pose: 'walk', facing: 0, x: 100, y: 100 });
+  const left = drawCharacter(recordingCtx(), { archetype: 'moth0', pose: 'walk', facing: Math.PI, x: 100, y: 100 });
+  assert(right.head.y < 100, 'head is above origin facing right');
+  assert(left.head.y < 100, 'head is above origin facing left');
+  assert(Math.abs(right.head.y - left.head.y) < 1e-4, 'head y matches regardless of horizontal facing');
+});
+test('character: moth0 draws bomber jacket flutter and mask aperture glow', () => {
+  const plainCtx = recordingCtx();
+  drawCharacter(plainCtx, { archetype: 'guard', pose: 'idle', facing: 0, x: 100, y: 100 });
+  const mothCtx = recordingCtx();
+  drawCharacter(mothCtx, { archetype: 'moth0', pose: 'walk', phase: 1, facing: 0, x: 100, y: 100 });
+  assert(mothCtx.calls.length > 0);
+  assert.equal(CHARACTERS.moth0.gear.bomber, true);
+  assert.equal(CHARACTERS.moth0.gear.mask, 'moth');
+});
+test('character: guard cap and radio transceiver render status LED', () => {
+  const idleCtx = recordingCtx();
+  drawCharacter(idleCtx, { archetype: 'guard', pose: 'idle', facing: 0, x: 100, y: 100 });
+  const combatCtx = recordingCtx();
+  drawCharacter(combatCtx, { archetype: 'guard', pose: 'aim', combat: true, facing: 0, x: 100, y: 100 });
+  assert(idleCtx.calls.length > 0 && combatCtx.calls.length > 0);
+  assert.equal(CHARACTERS.guard.gear.hat, 'cap');
+  assert.equal(CHARACTERS.guard.gear.radio, true);
+});
+test('character: shotgunner renders hazard vest and diagonal shell loops', () => {
+  const ctx = recordingCtx();
+  drawCharacter(ctx, { archetype: 'shotgunner', pose: 'idle', facing: 0, x: 100, y: 100 });
+  assert.equal(CHARACTERS.shotgunner.gear.vest, true);
+  assert.equal(CHARACTERS.shotgunner.gear.bandolier, true);
+  assert(ctx.calls.length > 0);
 });
 
 test('art: weapon silhouettes are distinct per type', () => {
