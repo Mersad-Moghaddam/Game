@@ -43,10 +43,11 @@ const PHASE1_MISSIONS = [
       P(728, 595, 56, 30, 'table'), P(820, 760, 70, 34, 'table'), P(1008, 610, 44, 44, 'vending', true, 3), P(1055, 805, 80, 28, 'bench'), P(905, 590, 24, 24, 'barrel', true, 1), P(1180, 845, 24, 24, 'barrel', true, 1),
       P(1270, 745, 72, 34, 'desk', true, 3), P(1435, 795, 42, 58, 'cabinet', true, 3),
       P(360, 660, 24, 24, 'barrel', true, 1), P(1300, 650, 24, 24, 'barrel', true, 1),
+      P(680, 428, 20, 20, 'breaker', true, 1),
       P(805, 400, 12, 28, 'glass', false, 1), P(1110, 400, 12, 28, 'glass', false, 1), P(650, 610, 12, 50, 'glass', false, 1)
     ],
     lights: [L(500, 260, 190), L(760, 290, 150), L(1030, 280, 150), L(1320, 270, 170), L(760, 680, 170), L(1080, 690, 160), L(1380, 790, 180), L(150, 520, 150)],
-    pickups: [{ x: 400, y: 570, weapon: 'baton' }, { x: 750, y: 245, weapon: 'pistol' }, { x: 1010, y: 760, weapon: 'shotgun' }, { x: 1375, y: 230, weapon: 'suppressed' }, { x: 500, y: 700, weapon: 'cleaver' }, { x: 300, y: 650, weapon: 'bottle' }, { x: 1240, y: 640, weapon: 'revolver' }],
+    pickups: [{ x: 400, y: 570, weapon: 'baton' }, { x: 750, y: 245, weapon: 'pistol' }, { x: 1010, y: 760, weapon: 'shotgun' }, { x: 1375, y: 230, weapon: 'suppressed' }, { x: 500, y: 700, weapon: 'cleaver' }, { x: 300, y: 650, weapon: 'bottle' }, { x: 1240, y: 640, weapon: 'revolver' }, { x: 1450, y: 230, weapon: 'katana' }],
     enemies: [
       E(250, 320, 'guard', [{ x: 230, y: 300 }, { x: 290, y: 360 }]),
       E(510, 250, 'guard', [{ x: 450, y: 250 }, { x: 602, y: 250 }]),
@@ -87,10 +88,11 @@ const PHASE1_MISSIONS = [
       P(300, 300, 56, 30, 'table'), P(900, 300, 56, 30, 'table'), P(300, 560, 56, 30, 'table'), P(900, 560, 56, 30, 'table'),
       P(520, 60, 44, 44, 'vending'), P(1100, 60, 24, 24, 'barrel', true, 1), P(80, 700, 24, 24, 'barrel', true, 1),
       P(470, 420, 24, 24, 'barrel', true, 1), P(700, 420, 24, 24, 'barrel', true, 1),
+      P(836, 520, 24, 20, 'breaker', true, 1),
       P(600, 480, 12, 28, 'glass', false, 1)
     ],
     lights: [L(600, 300, 230), L(250, 180, 150), L(950, 180, 150), L(250, 580, 150), L(950, 580, 150), L(110, 380, 140)],
-    pickups: [{ x: 280, y: 400, weapon: 'baton' }, { x: 1050, y: 120, weapon: 'pistol' }, { x: 1050, y: 640, weapon: 'smg' }, { x: 300, y: 650, weapon: 'bottle' }, { x: 900, y: 90, weapon: 'cleaver' }],
+    pickups: [{ x: 280, y: 400, weapon: 'baton' }, { x: 1050, y: 120, weapon: 'pistol' }, { x: 1050, y: 640, weapon: 'smg' }, { x: 300, y: 650, weapon: 'bottle' }, { x: 900, y: 90, weapon: 'cleaver' }, { x: 950, y: 150, weapon: 'katana' }],
     enemies: [
       E(600, 250, 'brawler', [{ x: 540, y: 240 }, { x: 660, y: 300 }]),
       E(470, 300, 'guard', [{ x: 418, y: 260 }, { x: 540, y: 360 }]),
@@ -130,10 +132,11 @@ const PHASE1_MISSIONS = [
       P(1020, 180, 40, 40, 'cabinet'), P(1080, 180, 40, 40, 'cabinet'),
       P(350, 700, 24, 24, 'barrel', true, 1), P(1240, 600, 24, 24, 'barrel', true, 1),
       P(600, 350, 24, 24, 'barrel', true, 1), P(850, 350, 24, 24, 'barrel', true, 1),
+      P(498, 240, 20, 24, 'breaker', true, 1),
       P(1200, 200, 24, 24, 'barrel', true, 1), P(1200, 700, 44, 44, 'vending')
     ],
     lights: [L(350, 250, 170), L(600, 250, 170), L(850, 250, 170), L(1100, 250, 170), L(650, 700, 200), L(135, 220, 150)],
-    pickups: [{ x: 120, y: 500, weapon: 'pistol' }, { x: 800, y: 120, weapon: 'shotgun' }, { x: 1240, y: 740, weapon: 'smg' }, { x: 600, y: 740, weapon: 'baton' }, { x: 1100, y: 740, weapon: 'cleaver' }],
+    pickups: [{ x: 120, y: 500, weapon: 'pistol' }, { x: 800, y: 120, weapon: 'shotgun' }, { x: 1240, y: 740, weapon: 'smg' }, { x: 600, y: 740, weapon: 'baton' }, { x: 1100, y: 740, weapon: 'cleaver' }, { x: 1020, y: 240, weapon: 'rifle' }],
     enemies: [
       E(350, 150, 'guard', [{ x: 300, y: 140 }, { x: 420, y: 300 }]),
       E(350, 560, 'brawler', [{ x: 300, y: 500 }, { x: 420, y: 680 }]),
@@ -171,10 +174,11 @@ const PHASE1_MISSIONS = [
       P(1240, 180, 80, 28, 'bench'), P(1240, 480, 80, 28, 'bench'),
       P(120, 60, 44, 44, 'vending'), P(1360, 600, 44, 44, 'vending'),
       P(80, 600, 24, 24, 'barrel', true, 1), P(650, 350, 24, 24, 'barrel', true, 1),
+      P(928, 220, 20, 24, 'breaker', true, 1),
       P(600, 300, 12, 28, 'glass', false, 1)
     ],
     lights: [L(200, 350, 170), L(500, 120, 150), L(500, 580, 150), L(1000, 120, 150), L(1000, 580, 150), L(1300, 350, 180), L(110, 350, 150)],
-    pickups: [{ x: 150, y: 640, weapon: 'pistol' }, { x: 760, y: 640, weapon: 'shotgun' }, { x: 100, y: 80, weapon: 'baton' }, { x: 1310, y: 640, weapon: 'revolver' }, { x: 620, y: 90, weapon: 'bottle' }],
+    pickups: [{ x: 150, y: 640, weapon: 'pistol' }, { x: 760, y: 640, weapon: 'shotgun' }, { x: 100, y: 80, weapon: 'baton' }, { x: 1310, y: 640, weapon: 'revolver' }, { x: 620, y: 90, weapon: 'bottle' }, { x: 920, y: 150, weapon: 'rifle' }],
     enemies: [
       E(1300, 350, 'elite', [{ x: 1260, y: 320 }, { x: 1340, y: 420 }]),
       E(1180, 290, 'guard', [{ x: 1140, y: 280 }, { x: 1240, y: 320 }]),
@@ -212,10 +216,11 @@ const PHASE1_MISSIONS = [
       P(520, 80, 92, 34, 'sofa'), P(520, 660, 92, 34, 'sofa'),
       P(980, 80, 78, 36, 'bed'), P(1050, 600, 72, 34, 'desk'), P(900, 650, 44, 58, 'cabinet'),
       P(700, 300, 24, 24, 'barrel', true, 1), P(1100, 300, 44, 44, 'vending'),
+      P(372, 220, 28, 20, 'breaker', true, 1),
       P(520, 380, 24, 24, 'barrel', true, 1)
     ],
     lights: [L(250, 250, 180), L(650, 250, 190), L(1000, 250, 180), L(250, 600, 180), L(900, 600, 180), L(120, 400, 150)],
-    pickups: [{ x: 300, y: 180, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 700, weapon: 'shotgun' }, { x: 1080, y: 120, weapon: 'suppressed' }, { x: 700, y: 660, weapon: 'cleaver' }, { x: 520, y: 200, weapon: 'revolver' }],
+    pickups: [{ x: 300, y: 180, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 700, weapon: 'shotgun' }, { x: 1080, y: 120, weapon: 'suppressed' }, { x: 700, y: 660, weapon: 'cleaver' }, { x: 520, y: 200, weapon: 'revolver' }, { x: 1050, y: 680, weapon: 'katana' }],
     enemies: [
       E(600, 200, 'elite', [{ x: 560, y: 180 }, { x: 680, y: 260 }]),
       E(600, 600, 'shotgunner', [{ x: 560, y: 560 }, { x: 680, y: 660 }]),
@@ -253,10 +258,11 @@ const PHASE2_MISSIONS = [
       P(300, 120, 90, 34, 'sofa'), P(560, 700, 54, 54, 'desk', true, 3), P(880, 110, 80, 28, 'bench'),
       P(1280, 700, 44, 44, 'vending'), P(1350, 200, 24, 24, 'barrel', true, 1), P(500, 420, 24, 24, 'barrel', true, 1),
       P(950, 760, 24, 24, 'barrel', true, 1), P(740, 300, 40, 40, 'cabinet', true, 3), P(1200, 520, 40, 40, 'cabinet', true, 3),
+      P(648, 280, 20, 24, 'breaker', true, 1),
       P(820, 600, 12, 28, 'glass', false, 1)
     ],
     lights: [L(250, 150, 170), L(600, 300, 170), L(900, 400, 170), L(1250, 250, 170), L(1250, 700, 170), L(120, 450, 150)],
-    pickups: [{ x: 300, y: 700, weapon: 'pistol' }, { x: 700, y: 100, weapon: 'shotgun' }, { x: 980, y: 780, weapon: 'baton' }, { x: 1400, y: 600, weapon: 'smg' }, { x: 420, y: 140, weapon: 'cleaver' }, { x: 860, y: 520, weapon: 'suppressed' }],
+    pickups: [{ x: 300, y: 700, weapon: 'pistol' }, { x: 700, y: 100, weapon: 'shotgun' }, { x: 980, y: 780, weapon: 'baton' }, { x: 1400, y: 600, weapon: 'smg' }, { x: 420, y: 140, weapon: 'cleaver' }, { x: 860, y: 520, weapon: 'suppressed' }, { x: 1350, y: 720, weapon: 'rifle' }],
     enemies: [
       E(320, 650, 'guard', [{ x: 280, y: 600 }, { x: 380, y: 700 }]),
       E(340, 200, 'brawler', [{ x: 300, y: 190 }, { x: 400, y: 260 }]),
@@ -291,10 +297,11 @@ const PHASE2_MISSIONS = [
     props: [
       P(300, 120, 90, 34, 'sofa'), P(700, 120, 44, 44, 'vending'), P(1100, 600, 44, 44, 'vending'),
       P(600, 600, 54, 54, 'desk', true, 3), P(1000, 300, 24, 24, 'barrel', true, 1), P(350, 600, 24, 24, 'barrel', true, 1),
+      P(528, 200, 20, 24, 'breaker', true, 1),
       P(820, 400, 12, 28, 'glass', false, 1)
     ],
     lights: [L(200, 380, 140), L(600, 250, 170), L(1000, 250, 170), L(600, 600, 170), L(1000, 600, 170), L(1200, 380, 160)],
-    pickups: [{ x: 320, y: 650, weapon: 'pistol' }, { x: 620, y: 100, weapon: 'shotgun' }, { x: 1000, y: 700, weapon: 'smg' }, { x: 1150, y: 120, weapon: 'cleaver' }, { x: 760, y: 300, weapon: 'baton' }, { x: 1180, y: 400, weapon: 'revolver' }],
+    pickups: [{ x: 320, y: 650, weapon: 'pistol' }, { x: 620, y: 100, weapon: 'shotgun' }, { x: 1000, y: 700, weapon: 'smg' }, { x: 1150, y: 120, weapon: 'cleaver' }, { x: 760, y: 300, weapon: 'baton' }, { x: 1180, y: 400, weapon: 'revolver' }, { x: 920, y: 150, weapon: 'katana' }],
     enemies: [
       E(300, 250, 'elite', [{ x: 260, y: 200 }, { x: 360, y: 320 }]),
       E(400, 600, 'guard', [{ x: 360, y: 560 }, { x: 460, y: 660 }]),
@@ -328,10 +335,11 @@ const PHASE2_MISSIONS = [
     props: [
       P(300, 120, 118, 48, 'car', true, 4), P(820, 120, 118, 48, 'car', true, 4), P(300, 700, 118, 48, 'car', true, 4),
       P(820, 700, 118, 48, 'car', true, 4), P(1300, 400, 24, 24, 'barrel', true, 1), P(650, 450, 24, 24, 'barrel', true, 1),
+      P(588, 240, 20, 24, 'breaker', true, 1),
       P(760, 150, 44, 44, 'vending'), P(760, 700, 44, 44, 'vending')
     ],
     lights: [L(120, 450, 140), L(400, 250, 170), L(800, 450, 180), L(1200, 250, 170), L(1200, 700, 170), L(700, 780, 160)],
-    pickups: [{ x: 200, y: 120, weapon: 'pistol' }, { x: 1200, y: 120, weapon: 'shotgun' }, { x: 200, y: 750, weapon: 'smg' }, { x: 1300, y: 800, weapon: 'baton' }, { x: 500, y: 450, weapon: 'baton' }, { x: 700, y: 300, weapon: 'revolver' }],
+    pickups: [{ x: 200, y: 120, weapon: 'pistol' }, { x: 1200, y: 120, weapon: 'shotgun' }, { x: 200, y: 750, weapon: 'smg' }, { x: 1300, y: 800, weapon: 'baton' }, { x: 500, y: 450, weapon: 'baton' }, { x: 700, y: 300, weapon: 'revolver' }, { x: 1250, y: 450, weapon: 'rifle' }],
     enemies: [
       E(300, 300, 'guard', [{ x: 260, y: 250 }, { x: 360, y: 360 }]),
       E(450, 600, 'brawler', [{ x: 400, y: 550 }, { x: 520, y: 660 }]),
@@ -364,10 +372,11 @@ const PHASE2_MISSIONS = [
     props: [
       P(300, 120, 90, 34, 'sofa'), P(700, 700, 90, 34, 'sofa'), P(1200, 120, 90, 34, 'sofa'),
       P(1400, 700, 44, 44, 'vending'), P(900, 450, 56, 30, 'table'), P(400, 600, 24, 24, 'barrel', true, 1),
+      P(588, 280, 20, 24, 'breaker', true, 1),
       P(1300, 450, 24, 24, 'barrel', true, 1), P(820, 250, 54, 54, 'desk', true, 3)
     ],
     lights: [L(120, 450, 140), L(500, 250, 170), L(900, 150, 170), L(900, 600, 170), L(1300, 250, 170), L(1400, 700, 160)],
-    pickups: [{ x: 300, y: 700, weapon: 'pistol' }, { x: 650, y: 120, weapon: 'shotgun' }, { x: 1150, y: 750, weapon: 'smg' }, { x: 1450, y: 250, weapon: 'cleaver' }, { x: 750, y: 300, weapon: 'baton' }, { x: 1250, y: 600, weapon: 'revolver' }],
+    pickups: [{ x: 300, y: 700, weapon: 'pistol' }, { x: 650, y: 120, weapon: 'shotgun' }, { x: 1150, y: 750, weapon: 'smg' }, { x: 1450, y: 250, weapon: 'cleaver' }, { x: 750, y: 300, weapon: 'baton' }, { x: 1250, y: 600, weapon: 'revolver' }, { x: 1100, y: 180, weapon: 'katana' }],
     enemies: [
       E(320, 300, 'guard', [{ x: 280, y: 260 }, { x: 380, y: 360 }]),
       E(450, 700, 'brawler', [{ x: 400, y: 650 }, { x: 520, y: 760 }]),
@@ -403,10 +412,11 @@ const PHASE2_MISSIONS = [
       P(120, 80, 80, 36, 'bed'), P(120, 740, 72, 34, 'desk'), P(300, 300, 60, 30, 'table'),
       P(700, 80, 92, 34, 'sofa'), P(700, 700, 92, 34, 'sofa'), P(1200, 80, 78, 36, 'bed'),
       P(1300, 700, 72, 34, 'desk'), P(900, 650, 44, 58, 'cabinet', true, 3),
+      P(588, 240, 20, 24, 'breaker', true, 1),
       P(1150, 400, 24, 24, 'barrel', true, 1), P(600, 600, 24, 24, 'barrel', true, 1), P(500, 250, 24, 24, 'barrel', true, 1)
     ],
     lights: [L(200, 430, 150), L(400, 250, 170), L(800, 180, 180), L(800, 650, 180), L(1200, 250, 180), L(1200, 650, 180)],
-    pickups: [{ x: 300, y: 180, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 720, weapon: 'shotgun' }, { x: 1280, y: 120, weapon: 'suppressed' }, { x: 700, y: 680, weapon: 'cleaver' }, { x: 520, y: 200, weapon: 'revolver' }],
+    pickups: [{ x: 300, y: 180, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 720, weapon: 'shotgun' }, { x: 1280, y: 120, weapon: 'suppressed' }, { x: 700, y: 680, weapon: 'cleaver' }, { x: 520, y: 200, weapon: 'revolver' }, { x: 1150, y: 180, weapon: 'rifle' }],
     enemies: [
       E(600, 200, 'elite', [{ x: 605, y: 180 }, { x: 680, y: 260 }]),
       E(640, 600, 'shotgunner', [{ x: 605, y: 560 }, { x: 680, y: 660 }]),
@@ -441,10 +451,11 @@ const PHASE3_MISSIONS = [
     props: [
       P(300, 150, 90, 34, 'sofa'), P(700, 800, 90, 34, 'sofa'), P(1200, 150, 90, 34, 'sofa'),
       P(900, 500, 56, 30, 'table'), P(400, 700, 24, 24, 'barrel', true, 1), P(1350, 800, 24, 24, 'barrel', true, 1),
-      P(700, 300, 40, 40, 'cabinet', true, 3), P(1250, 400, 40, 40, 'cabinet', true, 3), P(950, 800, 80, 28, 'bench')
+      P(700, 300, 40, 40, 'cabinet', true, 3), P(1250, 400, 40, 40, 'cabinet', true, 3), P(950, 800, 80, 28, 'bench'),
+      P(588, 300, 20, 24, 'breaker', true, 1)
     ],
     lights: [L(120, 500, 140), L(400, 300, 170), L(800, 180, 180), L(800, 700, 180), L(1250, 300, 180), L(1250, 700, 180)],
-    pickups: [{ x: 300, y: 800, weapon: 'pistol' }, { x: 700, y: 120, weapon: 'shotgun' }, { x: 1150, y: 850, weapon: 'smg' }, { x: 1450, y: 300, weapon: 'revolver' }, { x: 800, y: 400, weapon: 'baton' }, { x: 1250, y: 700, weapon: 'cleaver' }],
+    pickups: [{ x: 300, y: 800, weapon: 'pistol' }, { x: 700, y: 120, weapon: 'shotgun' }, { x: 1150, y: 850, weapon: 'smg' }, { x: 1450, y: 300, weapon: 'revolver' }, { x: 800, y: 400, weapon: 'baton' }, { x: 1250, y: 700, weapon: 'cleaver' }, { x: 750, y: 700, weapon: 'rifle' }],
     enemies: [
       E(320, 300, 'guard', [{ x: 280, y: 250 }, { x: 380, y: 360 }]),
       E(450, 750, 'brawler', [{ x: 400, y: 680 }, { x: 520, y: 820 }]),
@@ -479,10 +490,11 @@ const PHASE3_MISSIONS = [
     props: [
       P(300, 120, 90, 34, 'sofa'), P(700, 650, 90, 34, 'sofa'), P(1100, 120, 44, 44, 'vending'),
       P(600, 300, 54, 54, 'desk', true, 3), P(1000, 650, 54, 54, 'desk', true, 3), P(400, 650, 24, 24, 'barrel', true, 1),
+      P(528, 220, 20, 24, 'breaker', true, 1),
       P(1200, 400, 24, 24, 'barrel', true, 1), P(820, 450, 12, 28, 'glass', false, 1)
     ],
     lights: [L(120, 410, 150), L(400, 250, 170), L(750, 180, 170), L(750, 600, 170), L(1150, 250, 170), L(1150, 650, 170)],
-    pickups: [{ x: 300, y: 650, weapon: 'pistol' }, { x: 620, y: 120, weapon: 'shotgun' }, { x: 1000, y: 120, weapon: 'smg' }, { x: 1150, y: 700, weapon: 'revolver' }, { x: 700, y: 400, weapon: 'baton' }, { x: 380, y: 180, weapon: 'cleaver' }],
+    pickups: [{ x: 300, y: 650, weapon: 'pistol' }, { x: 620, y: 120, weapon: 'shotgun' }, { x: 1000, y: 120, weapon: 'smg' }, { x: 1150, y: 700, weapon: 'revolver' }, { x: 700, y: 400, weapon: 'baton' }, { x: 380, y: 180, weapon: 'cleaver' }, { x: 650, y: 650, weapon: 'katana' }, { x: 1100, y: 200, weapon: 'rifle' }],
     enemies: [
       E(300, 300, 'guard', [{ x: 260, y: 260 }, { x: 360, y: 360 }]),
       E(450, 600, 'brawler', [{ x: 400, y: 550 }, { x: 485, y: 660 }]),
@@ -515,10 +527,11 @@ const PHASE3_MISSIONS = [
     props: [
       P(300, 120, 90, 34, 'sofa'), P(700, 650, 90, 34, 'sofa'), P(1000, 120, 44, 44, 'vending'),
       P(600, 600, 54, 54, 'desk', true, 3), P(350, 650, 24, 24, 'barrel', true, 1), P(1050, 650, 24, 24, 'barrel', true, 1),
+      P(488, 200, 20, 24, 'breaker', true, 1),
       P(700, 300, 24, 24, 'barrel', true, 1), P(950, 400, 12, 28, 'glass', false, 1)
     ],
     lights: [L(120, 400, 140), L(400, 250, 170), L(750, 180, 170), L(750, 600, 170), L(1050, 300, 170), L(1050, 650, 160)],
-    pickups: [{ x: 300, y: 650, weapon: 'pistol' }, { x: 620, y: 120, weapon: 'shotgun' }, { x: 1000, y: 700, weapon: 'smg' }, { x: 1100, y: 250, weapon: 'revolver' }, { x: 700, y: 450, weapon: 'baton' }],
+    pickups: [{ x: 300, y: 650, weapon: 'pistol' }, { x: 620, y: 120, weapon: 'shotgun' }, { x: 1000, y: 700, weapon: 'smg' }, { x: 1100, y: 250, weapon: 'revolver' }, { x: 700, y: 450, weapon: 'baton' }, { x: 1050, y: 200, weapon: 'katana' }],
     enemies: [
       E(300, 300, 'guard', [{ x: 260, y: 260 }, { x: 360, y: 360 }]),
       E(420, 600, 'brawler', [{ x: 380, y: 550 }, { x: 500, y: 660 }]),
@@ -549,10 +562,11 @@ const PHASE3_MISSIONS = [
     props: [
       P(300, 120, 90, 34, 'sofa'), P(800, 650, 90, 34, 'sofa'), P(1300, 120, 90, 34, 'sofa'),
       P(500, 600, 54, 54, 'desk', true, 3), P(1000, 600, 54, 54, 'desk', true, 3), P(1400, 650, 44, 44, 'vending'),
+      P(628, 220, 20, 24, 'breaker', true, 1),
       P(400, 250, 24, 24, 'barrel', true, 1), P(1200, 250, 24, 24, 'barrel', true, 1), P(850, 400, 12, 28, 'glass', false, 1)
     ],
     lights: [L(120, 400, 140), L(500, 150, 170), L(900, 150, 170), L(900, 600, 170), L(1400, 250, 170), L(1400, 650, 160)],
-    pickups: [{ x: 300, y: 650, weapon: 'pistol' }, { x: 700, y: 120, weapon: 'shotgun' }, { x: 1150, y: 700, weapon: 'smg' }, { x: 1500, y: 250, weapon: 'revolver' }, { x: 800, y: 300, weapon: 'baton' }, { x: 1350, y: 450, weapon: 'cleaver' }],
+    pickups: [{ x: 300, y: 650, weapon: 'pistol' }, { x: 700, y: 120, weapon: 'shotgun' }, { x: 1150, y: 700, weapon: 'smg' }, { x: 1500, y: 250, weapon: 'revolver' }, { x: 800, y: 300, weapon: 'baton' }, { x: 1350, y: 450, weapon: 'cleaver' }, { x: 950, y: 180, weapon: 'rifle' }],
     enemies: [
       E(320, 300, 'guard', [{ x: 280, y: 260 }, { x: 380, y: 360 }]),
       E(450, 600, 'brawler', [{ x: 400, y: 550 }, { x: 520, y: 680 }]),
@@ -586,10 +600,11 @@ const PHASE3_MISSIONS = [
     props: [
       P(120, 80, 80, 36, 'bed'), P(300, 300, 60, 30, 'table'), P(700, 80, 92, 34, 'sofa'),
       P(700, 780, 92, 34, 'sofa'), P(1200, 80, 78, 36, 'bed'), P(900, 700, 44, 58, 'cabinet', true, 3),
+      P(588, 240, 20, 24, 'breaker', true, 1),
       P(650, 600, 24, 24, 'barrel', true, 1), P(1150, 400, 24, 24, 'barrel', true, 1), P(500, 250, 24, 24, 'barrel', true, 1)
     ],
     lights: [L(120, 450, 140), L(400, 250, 170), L(800, 180, 180), L(800, 700, 180), L(1250, 250, 180), L(1250, 700, 180)],
-    pickups: [{ x: 300, y: 180, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 750, weapon: 'shotgun' }, { x: 1280, y: 120, weapon: 'suppressed' }, { x: 700, y: 680, weapon: 'cleaver' }, { x: 520, y: 200, weapon: 'revolver' }],
+    pickups: [{ x: 300, y: 180, weapon: 'baton' }, { x: 650, y: 120, weapon: 'smg' }, { x: 650, y: 750, weapon: 'shotgun' }, { x: 1280, y: 120, weapon: 'suppressed' }, { x: 700, y: 680, weapon: 'cleaver' }, { x: 520, y: 200, weapon: 'revolver' }, { x: 1000, y: 650, weapon: 'katana' }],
     enemies: [
       E(600, 200, 'elite', [{ x: 605, y: 180 }, { x: 680, y: 260 }]),
       E(600, 600, 'shotgunner', [{ x: 605, y: 560 }, { x: 680, y: 660 }]),

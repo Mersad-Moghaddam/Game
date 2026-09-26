@@ -713,6 +713,7 @@ function recordingCtx() {
   return { calls, save: noop('save'), restore: noop('restore'), scale: noop('scale'), translate: noop('translate'), rotate: noop('rotate'),
     fillRect: noop('fillRect'), strokeRect: noop('strokeRect'), beginPath: noop('beginPath'), moveTo: noop('moveTo'), lineTo: noop('lineTo'),
     arc: noop('arc'), arcTo: noop('arcTo'), ellipse: noop('ellipse'), closePath: noop('closePath'), stroke: noop('stroke'), fill: noop('fill'),
+    fillText: noop('fillText'), setLineDash: noop('setLineDash'),
     globalAlpha: 1, lineWidth: 1 };
 }
 test('art: every weapon draws a distinct silhouette without throwing', () => {
@@ -1473,6 +1474,175 @@ test('fx: muzzleFlash creates transient flash registered in fx.flashes', () => {
   assert.equal(fx.flashes[0].y, 60);
   assert.equal(fx.flashes[0].r, 80);
 });
+
+// ----------------------------- procedural flooring, AO & breaker props
+test('missions: all 15 missions pass structural checks with walls and pickups', () => {
+  assert.equal(MISSIONS.length, 15);
+  for (let i = 0; i < MISSIONS.length; i++) {
+    const m = MISSIONS[i];
+    assert(m.walls && m.walls.length > 0, `mission ${i} has walls`);
+    assert(m.pickups && m.pickups.length > 0, `mission ${i} has pickups`);
+  }
+});
+
+test('missions: katana and rifle pickups integrated across campaign phases', () => {
+  const katanaMissions = MISSIONS.filter(m => m.pickups.some(p => p.weapon === 'katana'));
+  const rifleMissions = MISSIONS.filter(m => m.pickups.some(p => p.weapon === 'rifle'));
+  assert(katanaMissions.length >= 2, `katana placed in ${katanaMissions.length} missions (expected >= 2)`);
+  assert(rifleMissions.length >= 2, `rifle placed in ${rifleMissions.length} missions (expected >= 2)`);
+});
+
+test('missions: electrical breaker props placed across key missions', () => {
+  const breakerMissions = MISSIONS.filter(m => m.props.some(p => p.type === 'breaker'));
+  assert(breakerMissions.length >= 3, `breaker boxes placed in ${breakerMissions.length} missions (expected >= 3)`);
+  for (const m of MISSIONS) {
+    for (const p of m.props) {
+      if (p.type === 'breaker') {
+        assert.equal(p.solid, true, `breaker at ${m.id} ${p.x},${p.y} must be solid`);
+        assert.equal(p.hp, 1, `breaker at ${m.id} ${p.x},${p.y} must have hp: 1`);
+      }
+    }
+  }
+});
+
+test('props: breaker explodes with electrical arcs, light flash, screen shake, and stuns enemies within 220px', () => {
+  const missionDef = {
+    w: 800, h: 600, mood: 'violet',
+    spawn: { x: 100, y: 100 }, exit: { x: 700, y: 500 },
+    walls: [{ x: 0, y: 0, w: 800, h: 20 }],
+    doors: [],
+    props: [{ x: 200, y: 200, w: 24, h: 28, type: 'breaker', solid: true, hp: 1 }],
+    lights: [],
+    pickups: [],
+    enemies: []
+  };
+  const level = new Level(missionDef);
+  const breaker = level.props.find(p => p.type === 'breaker');
+  assert(breaker, 'breaker prop exists in level');
+  assert.equal(breaker.solid, true);
+  assert.equal(breaker.broken, false);
+
+  const eNear = new Enemy(250, 220, 'guard', []);
+  const eFar = new Enemy(500, 500, 'guard', []);
+  const bursts = [];
+  const flashes = [];
+  let shaken = 0;
+
+  const g = {
+    level,
+    enemies: [eNear, eFar],
+    projectiles: [],
+    thrown: [],
+    hazards: [],
+    player: new Player(100, 100),
+    weaponKinds: new Set(),
+    fx: {
+      burst: (...args) => bursts.push(args),
+      flash: (...args) => flashes.push(args)
+    },
+    shake: (val) => { shaken = val; },
+    emitNoise: () => {},
+    audio: { play: () => {} },
+    renderer: { glitch: () => {} }
+  };
+  Object.assign(g, CombatSystem);
+
+  const destroyed = level.damageProp(breaker, 1);
+  assert.equal(destroyed, true);
+  assert.equal(breaker.broken, true);
+  assert.equal(breaker.solid, false);
+
+  g.triggerBreaker(breaker);
+
+  const elecBurst = bursts.find(b => b[3] === '#12e0ff');
+  assert(elecBurst, 'electrical burst emitted with color #12e0ff');
+  assert.equal(elecBurst[0], 200 + 12);
+  assert.equal(elecBurst[1], 200 + 14);
+
+  const elecFlash = flashes.find(f => f[3] === '#12e0ff');
+  assert(elecFlash, 'light flash emitted with color #12e0ff');
+
+  assert.equal(shaken, 4, 'screen shake of 4 emitted');
+  assert(eNear.stun >= 1.2, `near enemy stun ${eNear.stun} >= 1.2`);
+  assert.equal(eNear.state, 'COMBAT', 'near enemy alerted to COMBAT');
+  assert.equal(eFar.stun, 0, 'far enemy unaffected');
+
+  const destroyedAgain = level.damageProp(breaker, 1);
+  assert.equal(destroyedAgain, false);
+});
+
+test('combat: bullet hitting breaker prop triggers electrical explosion', () => {
+  const missionDef = {
+    w: 800, h: 600, mood: 'toxic',
+    spawn: { x: 50, y: 50 }, exit: { x: 700, y: 500 },
+    walls: [],
+    doors: [],
+    props: [{ x: 100, y: 100, w: 20, h: 20, type: 'breaker', solid: true, hp: 1 }],
+    lights: [],
+    pickups: [],
+    enemies: []
+  };
+  const level = new Level(missionDef);
+  const breaker = level.props[0];
+  const e = new Enemy(150, 100, 'guard', []);
+  const bursts = [];
+
+  const g = {
+    level,
+    enemies: [e],
+    projectiles: [],
+    _projFree: [],
+    thrown: [],
+    hazards: [],
+    player: new Player(50, 50),
+    weaponKinds: new Set(),
+    fx: { burst: (...args) => bursts.push(args), flash: () => {} },
+    shake: () => {},
+    emitNoise: () => {},
+    audio: { play: () => {} },
+    renderer: null
+  };
+  Object.assign(g, CombatSystem);
+
+  g.spawnProjectile(50, 110, 0, 800, 1, true);
+  g.updateProjectiles(0.1);
+
+  assert.equal(breaker.broken, true, 'breaker should be broken by bullet');
+  assert(e.stun >= 1.2, 'enemy near breaker should be stunned');
+  assert(bursts.some(args => args[3] === '#12e0ff'), 'electrical arcs burst on bullet hit');
+});
+
+test('level: bakeFloor renders distinct procedural patterns for sunset/violet vs toxic/blood', () => {
+  const violetLevel = new Level({ ...MISSIONS[0], mood: 'violet' });
+  const toxicLevel = new Level({ ...MISSIONS[0], mood: 'toxic' });
+
+  assert(typeof violetLevel.bakeFloor === 'function', 'bakeFloor method exists on Level');
+  assert(typeof toxicLevel.bakeFloor === 'function', 'bakeFloor method exists on Level');
+
+  const violetCtx = recordingCtx();
+  violetLevel.bakeFloor(violetCtx);
+  assert(violetCtx.calls.length > 0, 'violet level baked floor');
+
+  const toxicCtx = recordingCtx();
+  toxicLevel.bakeFloor(toxicCtx);
+  assert(toxicCtx.calls.length > 0, 'toxic level baked floor');
+});
+
+test('level: bake renders wall base ambient occlusion drop shadow', () => {
+  const level = new Level(MISSIONS[0]);
+  const fills = [];
+  const base = recordingCtx();
+  const ctx = {
+    ...base,
+    calls: base.calls,
+    set fillStyle(v) { fills.push(v); },
+    get fillStyle() { return fills[fills.length - 1]; }
+  };
+  level.bake(ctx);
+  const hasAO = fills.some(f => typeof f === 'string' && (f.includes('0,0,0,0.35') || f.includes('0, 0, 0, 0.35')));
+  assert(hasAO, 'wall base AO drop shadow band rendered in bake()');
+});
+
 
 // --------------------------------------------------------------- report
 if (failures.length) {

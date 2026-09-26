@@ -88,9 +88,10 @@ export const CombatSystem = {
     for (const p of this.level.props) {
       if (!p.broken && dist(attacker, { x: p.x + p.w / 2, y: p.y + p.h / 2 }) < w.range + 20) {
         if (this.level.damageProp(p, 1)) {
-          this.fx.burst(p.x + p.w / 2, p.y + p.h / 2, 12, p.type === 'glass' ? '#7fdad8' : '#8b7663', 170, .45, 3);
+          this.fx.burst(p.x + p.w / 2, p.y + p.h / 2, 12, p.type === 'glass' ? '#7fdad8' : (p.type === 'breaker' ? '#12e0ff' : '#8b7663'), 170, .45, 3);
           if (p.type === 'glass') { this.audio.play('glass'); this.emitNoise(p.x, p.y, 260, 'glass'); }
           if (p.type === 'barrel') this.explodeAt(p.x + p.w / 2, p.y + p.h / 2);
+          if (p.type === 'breaker') this.triggerBreaker(p);
         }
       }
     }
@@ -132,15 +133,32 @@ export const CombatSystem = {
     if (this.boss && !this.boss.dead && dist(this.boss, { x, y }) < 100) this.boss.damage(3, this, 0);
     if (!this.player.dead && dist(this.player, { x, y }) < 84 && !this.invincible) this.player.damage(1, this, Math.atan2(this.player.y - y, this.player.x - x));
   },
+  triggerBreaker(p) {
+    if (!p) return;
+    const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+    this.fx?.burst?.(cx, cy, 12, '#12e0ff', 180, 0.4, 3);
+    this.fx?.flash?.(cx, cy, 160, '#12e0ff', 0.18);
+    this.shake?.(4);
+    this.renderer?.glitch?.(0.5);
+    this.emitNoise?.(cx, cy, 320, 'breaker');
+    this.audio?.play?.('hit');
+    for (const enemy of (this.enemies || [])) {
+      if (!enemy.dead && dist(enemy, { x: cx, y: cy }) <= 220) {
+        enemy.stun = Math.max(enemy.stun || 0, 1.2);
+        enemy.state = 'COMBAT';
+      }
+    }
+  },
   updateProjectiles(dt) {
     for (const b of this.projectiles) {
       const ox = b.x, oy = b.y; b.px = ox; b.py = oy; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       const wall = this.level.bulletHit(ox, oy, b.x, b.y);
       if (wall) {
         if ('hp' in wall && this.level.damageProp(wall, b.damage)) {
-          this.fx.burst(b.x, b.y, 10, wall.type === 'glass' ? '#71d4d2' : '#9b745a', 150, .35, 3);
+          this.fx.burst(b.x, b.y, 10, wall.type === 'glass' ? '#71d4d2' : (wall.type === 'breaker' ? '#12e0ff' : '#9b745a'), 150, .35, 3);
           if (wall.type === 'glass') { this.audio.play('glass'); this.emitNoise(b.x, b.y, 260, 'glass'); }
           if (wall.type === 'barrel') this.explodeAt(wall.x + wall.w / 2, wall.y + wall.h / 2);
+          if (wall.type === 'breaker') this.triggerBreaker(wall);
         }
         if (b.ricochet > 0) { b.ricochet--; if (Math.abs(b.vx) > Math.abs(b.vy)) b.vx *= -1; else b.vy *= -1; b.x = ox; b.y = oy; this.fx.burst(ox, oy, 6, '#f0c66d', 100, .2, 2); }
         else b.life = 0;

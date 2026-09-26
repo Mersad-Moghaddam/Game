@@ -24,7 +24,7 @@ export class Level{
     this.dirty = false;
     for(const w of def.walls) this.walls.push({ x: w.x, y: w.y, w: w.w, h: w.h });
     for(const d of def.doors) this.doors.push({ x: d.x, y: d.y, w: d.w, h: d.h, axis: d.axis || (d.w > d.h ? 'h' : 'v'), open: false, broken: false });
-    for(const p of def.props) this.props.push({ x: p.x, y: p.y, w: p.w, h: p.h, type: p.type, solid: p.solid !== false, hp: p.hp || 2, broken: false });
+    for(const p of def.props) this.props.push({ x: p.x, y: p.y, w: p.w, h: p.h, type: p.type, solid: p.solid !== false, hp: p.hp || (p.type === 'breaker' ? 1 : 2), broken: false });
     for(const l of def.lights) this.lights.push({ x: l.x, y: l.y, r: l.r, mood: this.mood });
     for(const p of def.pickups) this.pickups.push({ x: p.x, y: p.y, weapon: makeWeapon(p.weapon) });
     if(this.goal.type === 'retrieve') this.objectives.push({ x: this.goal.x, y: this.goal.y, taken: false, armed: false, label: this.goal.label || 'OBJECTIVE' });
@@ -89,12 +89,68 @@ export class Level{
     else{ctx.fillStyle='#2a1030';ctx.fillRect(-11,-7,22,14);ctx.fillStyle=COLORS.ink;ctx.fillRect(-9,-6,18,12);ctx.fillStyle=COLORS.blood;ctx.beginPath();ctx.arc(6,0,5,0,Math.PI*2);ctx.fill()}
     ctx.restore();}
   draw(ctx){this.bake(ctx);}
-  bake(ctx){
+  bakeFloor(ctx){
     ctx.save();
     ctx.fillStyle=COLORS.void;ctx.fillRect(0,0,this.w,this.h);
     const g0=moodColor(this.mood,'ground',0), g1=moodColor(this.mood,'ground2',0);
     ctx.fillStyle=g0;ctx.fillRect(0,0,this.w,this.h);
-    for(let y=0,j=0;y<this.h;y+=56,j++){for(let x=0,i=0;x<this.w;x+=56,i++){if((i+j)%2===0)continue;ctx.fillStyle=g1;ctx.fillRect(x,y,54,54)}}
+
+    if(this.mood==='sunset'){
+      // Parquet floor striping (club/sunset zones)
+      for(let y=0,j=0;y<this.h;y+=56,j++){
+        for(let x=0,i=0;x<this.w;x+=56,i++){
+          const horiz = (i + j) % 2 === 0;
+          if(horiz){
+            for(let s=0;s<4;s++){
+              ctx.fillStyle = s % 2 === 0 ? g1 : g0;
+              ctx.fillRect(x, y + s * 14, 54, 13);
+            }
+          } else {
+            for(let s=0;s<4;s++){
+              ctx.fillStyle = s % 2 === 0 ? g1 : g0;
+              ctx.fillRect(x + s * 14, y, 13, 54);
+            }
+          }
+        }
+      }
+    } else if(this.mood==='violet'){
+      // Checkered bathroom / motel tiles
+      for(let y=0,j=0;y<this.h;y+=28,j++){
+        for(let x=0,i=0;x<this.w;x+=28,i++){
+          if((i+j)%2===0) continue;
+          ctx.fillStyle=g1;
+          ctx.fillRect(x,y,27,27);
+        }
+      }
+      ctx.save();
+      ctx.strokeStyle='rgba(0,0,0,0.28)'; ctx.lineWidth=1;
+      for(let x=0;x<this.w;x+=28){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,this.h); ctx.stroke(); }
+      for(let y=0;y<this.h;y+=28){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(this.w,y); ctx.stroke(); }
+      ctx.restore();
+    } else {
+      // Toxic / blood / industrial: diamond-plate / steel grating / safety stripes
+      for(let y=0,j=0;y<this.h;y+=56,j++){
+        for(let x=0,i=0;x<this.w;x+=56,i++){
+          if((i+j)%2!==0){ ctx.fillStyle=g1; ctx.fillRect(x,y,54,54); }
+          // Diamond-plate tread marks
+          ctx.fillStyle='rgba(255,255,255,0.06)';
+          ctx.fillRect(x+14,y+12,8,3); ctx.fillRect(x+34,y+12,8,3);
+          ctx.fillRect(x+24,y+26,8,3);
+          ctx.fillRect(x+14,y+40,8,3); ctx.fillRect(x+34,y+40,8,3);
+          // Rivets at corners
+          ctx.fillStyle='rgba(0,0,0,0.45)';
+          ctx.fillRect(x+2,y+2,3,3); ctx.fillRect(x+50,y+2,3,3);
+          ctx.fillRect(x+2,y+50,3,3); ctx.fillRect(x+50,y+50,3,3);
+        }
+      }
+      ctx.save();
+      ctx.strokeStyle=this.mood==='toxic'?'rgba(198,255,46,0.12)':'rgba(255,90,106,0.12)';
+      ctx.lineWidth=1.5;
+      for(let x=0;x<this.w;x+=56){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,this.h); ctx.stroke(); }
+      for(let y=0;y<this.h;y+=56){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(this.w,y); ctx.stroke(); }
+      ctx.restore();
+    }
+
     // neon grid seams
     ctx.save();ctx.strokeStyle=moodColor(this.mood,'wallHi',0);ctx.globalAlpha=.10;ctx.lineWidth=1;
     for(let x=0;x<this.w;x+=112){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,this.h);ctx.stroke()}
@@ -104,6 +160,11 @@ export class Level{
     ctx.save();ctx.globalAlpha=.13;ctx.fillStyle='#000';
     for(let i=0;i<220;i++){const x=hash2(i,41)*this.w,y=hash2(i,43)*this.h,r=2+hash2(i,47)*10;ctx.beginPath();ctx.ellipse(x,y,r,r*.7,0,0,Math.PI*2);ctx.fill()}
     ctx.restore();
+    ctx.restore();
+  }
+  bake(ctx){
+    ctx.save();
+    this.bakeFloor(ctx);
     // entry-room dressing: mat, floor sign, kind glyph and an arrow to the door
     const sp=this.def.spawn;
     if(sp){
@@ -125,6 +186,10 @@ export class Level{
       ctx.fillStyle=COLORS.bone;ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText(this.def.entryLabel||'ENTRY',sp.x,sp.y-35);ctx.textAlign='left';
       ctx.restore();
     }
+    // wall base ambient occlusion & heavy furniture contact shadows
+    ctx.fillStyle='rgba(0,0,0,0.35)';
+    for(const w of this.walls) ctx.fillRect(w.x-3,w.y-3,w.w+6,w.h+6);
+    for(const p of this.props){ if(p.solid&&!p.broken) ctx.fillRect(p.x-3,p.y-3,p.w+6,p.h+6); }
     // doors
     for(const d of this.doors){if(d.open||d.broken){ctx.strokeStyle=COLORS.orange;ctx.globalAlpha=.5;ctx.setLineDash([6,5]);ctx.strokeRect(d.x+.5,d.y+.5,d.w-1,d.h-1);ctx.setLineDash([]);ctx.globalAlpha=1;continue}ctx.fillStyle=COLORS.wall;ctx.fillRect(d.x,d.y,d.w,d.h);ctx.strokeStyle=moodColor(this.mood,'wallHi',0);ctx.lineWidth=2;ctx.strokeRect(d.x+3,d.y+3,d.w-6,d.h-6)}
     // walls
@@ -134,15 +199,37 @@ export class Level{
       ctx.restore();
     }
     // props
-    for(const p of this.props){if(p.broken){if(p.type==='glass'){ctx.fillStyle='rgba(18,224,255,.3)';for(let i=0;i<5;i++)ctx.fillRect(p.x-8+i*5,p.y+3+(i%2)*4,5,2)}continue}
+    for(const p of this.props){if(p.broken){
+      if(p.type==='glass'){ctx.fillStyle='rgba(18,224,255,.3)';for(let i=0;i<5;i++)ctx.fillRect(p.x-8+i*5,p.y+3+(i%2)*4,5,2)}
+      else if(p.type==='breaker'){
+        ctx.fillStyle='#18181c'; ctx.fillRect(p.x,p.y,p.w,p.h);
+        ctx.strokeStyle='#2e2e34'; ctx.lineWidth=1; ctx.strokeRect(p.x+.5,p.y+.5,p.w-1,p.h-1);
+        ctx.fillStyle='#0c0d10'; ctx.fillRect(p.x+2,p.y+2,p.w-4,p.h-4);
+        ctx.fillStyle='#000'; ctx.fillRect(p.x+p.w/2-2,p.y+p.h/2-2,4,4);
+      }
+      continue;
+    }
       let c=COLORS.violet;
-      if(p.type==='bed')c=COLORS.magenta;else if(p.type==='car')c=COLORS.blue;else if(p.type==='vending')c=COLORS.hotPink;else if(p.type==='barrel')c=COLORS.orange;else if(p.type==='glass')c='rgba(18,224,255,.45)';else if(p.type==='desk'||p.type==='table'||p.type==='sofa')c='#4a1a7a';else if(p.type==='dumpster'||p.type==='bench')c='#2e4a1a';else if(p.type==='cabinet')c='#5a1440';
+      if(p.type==='bed')c=COLORS.magenta;else if(p.type==='car')c=COLORS.blue;else if(p.type==='vending')c=COLORS.hotPink;else if(p.type==='barrel')c=COLORS.orange;else if(p.type==='glass')c='rgba(18,224,255,.45)';else if(p.type==='desk'||p.type==='table'||p.type==='sofa')c='#4a1a7a';else if(p.type==='dumpster'||p.type==='bench')c='#2e4a1a';else if(p.type==='cabinet')c='#5a1440';else if(p.type==='breaker')c='#22252c';
       ctx.fillStyle=c;ctx.fillRect(p.x,p.y,p.w,p.h);
       ctx.fillStyle=COLORS.ink;ctx.fillRect(p.x,p.y,p.w,2);ctx.fillRect(p.x,p.y,2,p.h);
       ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=1;ctx.strokeRect(p.x+.5,p.y+.5,p.w-1,p.h-1);
       if(p.type==='car'){ctx.fillStyle='rgba(18,224,255,.5)';ctx.fillRect(p.x+8,p.y+8,p.w-24,10)}
       if(p.type==='vending'){ctx.fillStyle=moodColor(this.mood,'glow',0);ctx.globalAlpha=.35;ctx.fillRect(p.x+6,p.y+6,p.w-12,p.h-12);ctx.globalAlpha=1}
       if(p.type==='bench'){ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(p.x+3,p.y+4,p.w-6,3)}
+      if(p.type==='breaker'){
+        const sh = Math.min(6, Math.max(3, p.h * 0.28)), sy = p.y + p.h - sh - 2;
+        ctx.fillStyle='#141416'; ctx.fillRect(p.x+2, sy, p.w-4, sh);
+        ctx.fillStyle='#eab308';
+        for(let sx = p.x + 3; sx < p.x + p.w - 3; sx += 5) ctx.fillRect(sx, sy, 2.5, sh);
+        ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(p.x + p.w - 5, p.y + 5, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle='#fde047';
+        const mx = p.x + p.w / 2, my = p.y + (p.h - sh) / 2;
+        ctx.beginPath();
+        ctx.moveTo(mx + 1, my - 4); ctx.lineTo(mx - 3, my); ctx.lineTo(mx, my);
+        ctx.lineTo(mx - 1, my + 4); ctx.lineTo(mx + 3, my); ctx.lineTo(mx, my);
+        ctx.closePath(); ctx.fill();
+      }
     }
     ctx.restore();
   }
