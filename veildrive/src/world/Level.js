@@ -82,7 +82,7 @@ export class Level{
   nearestDoor(p,max=64){let best=null,bd=max;for(const d of this.doors){if(d.broken||d.open)continue;const c={x:d.x+d.w/2,y:d.y+d.h/2},dd=dist(p,c);if(dd<bd){best=d;bd=dd}}return best;}
   openDoor(d,kick=false){if(!d)return;d.open=true;if(kick)d.broken=true;this.markDirty();}
   damageProp(o,dmg=1){if(!o||!('hp'in o)||o.broken)return false;o.hp-=dmg;if(o.hp<=0){o.broken=true;o.solid=false;this.markDirty();return true}return false;}
-  paintDecal(ctx,d){ctx.globalAlpha=d.a;ctx.fillStyle=COLORS.bloodDark;ctx.beginPath();ctx.ellipse(d.x,d.y,d.r,d.r*.65,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
+  paintDecal(ctx,d){ctx.globalAlpha=d.a;ctx.fillStyle=d.color||COLORS.bloodDark;ctx.beginPath();ctx.ellipse(d.x,d.y,d.r,d.r*.65,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
   paintCorpse(ctx,c){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.a);ctx.fillStyle='rgba(0,0,0,.5)';ctx.beginPath();ctx.ellipse(0,0,c.kind==='opened'?22:15,c.kind==='opened'?16:10,0,0,Math.PI*2);ctx.fill();
     if(c.kind==='opened'){ctx.fillStyle=COLORS.bloodDark;ctx.beginPath();ctx.ellipse(0,0,26,18,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2a1030';ctx.fillRect(-10,-5,20,10);ctx.fillStyle=COLORS.ink;ctx.fillRect(-8,-4,16,8);ctx.fillStyle=COLORS.blood;ctx.fillRect(-4,-6,8,12)}
     else if(c.kind==='decap'){ctx.fillStyle=COLORS.bloodDark;ctx.beginPath();ctx.ellipse(6,0,14,9,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2a1030';ctx.fillRect(-11,-6,20,13);ctx.fillStyle=COLORS.ink;ctx.fillRect(-9,-5,16,11);ctx.fillStyle=COLORS.blood;ctx.beginPath();ctx.arc(7,0,4,0,Math.PI*2);ctx.fill()}

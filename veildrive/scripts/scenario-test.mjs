@@ -423,16 +423,29 @@ try {
   await evalG(() => window.__VEILDRIVE__.startMission(4, true));
   await evalG(() => window.__VEILDRIVE__.completeGoal());
   await evalG(() => { const g = window.__VEILDRIVE__; g.player.x = g.level.exit.x; g.player.y = g.level.exit.y; g.interact(false); });
-  const phaseScreen = await waitFor(s => s.state === 'interlude' || s.state === 'phase', 6000);
-  const afterPhaseScreen = await waitFor(s => s.state === 'phase', 6000);
-  ok('phase: clearing mission 5 enters the NEW GAME+ phase screen', afterPhaseScreen.state === 'phase', JSON.stringify(afterPhaseScreen));
-  const phaseInit = await evalG(() => ({ phaseIndex: window.__VEILDRIVE__.phaseIndex, phase: window.__VEILDRIVE__.phase && window.__VEILDRIVE__.phase.id }));
-  ok('phase: the run is still phase 1 before the upgrade', phaseInit.phaseIndex === 0 && phaseInit.phase === 'p1', JSON.stringify(phaseInit));
-  const upAfterPhase = await waitFor(s => s.state === 'upgrade', 9000);
+  // The interlude/phase timers advance on animation frames, which headless
+  // Chromium throttles, so drive them with fixed steps instead of real time.
+  const phaseScreen = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    for (let i = 0; i < 600 && g.state !== 'phase'; i++) g.step(1 / 60);
+    return { state: g.state, phaseIndex: g.phaseIndex, phase: g.phase && g.phase.id };
+  });
+  ok('phase: clearing mission 5 enters the NEW GAME+ phase screen', phaseScreen.state === 'phase', JSON.stringify(phaseScreen));
+  ok('phase: the run is still phase 1 before the upgrade', phaseScreen.phaseIndex === 0 && phaseScreen.phase === 'p1', JSON.stringify(phaseScreen));
+  const upAfterPhase = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    for (let i = 0; i < 600 && g.state !== 'upgrade'; i++) g.step(1 / 60);
+    return { state: g.state };
+  });
   ok('phase: the phase screen leads to an upgrade', upAfterPhase.state === 'upgrade', JSON.stringify(upAfterPhase));
   const carriedWeapon = await evalG(() => window.__VEILDRIVE__.player.current.id);
   await page.keyboard.press('Digit1');
-  const phase2 = await waitFor(s => s.state === 'playing' && s.mi === 5, 9000);
+  const phase2 = await evalG(() => {
+    const g = window.__VEILDRIVE__;
+    for (let i = 0; i < 120 && !(g.state === 'playing' && g.missionIndex === 5); i++) g.step(1 / 60);
+    g.input.keys.clear(); g.input.pressed.clear();
+    return { state: g.state, mi: g.missionIndex };
+  });
   ok('phase: the next mission starts in phase 2 (mission 6)', phase2.mi === 5, JSON.stringify(phase2));
   const phaseInfo = await evalG(() => ({ phaseIndex: window.__VEILDRIVE__.phaseIndex, phase: window.__VEILDRIVE__.phase && window.__VEILDRIVE__.phase.id, hp: window.__VEILDRIVE__.player.hp, weapon: window.__VEILDRIVE__.player.current.id }));
   ok('phase: phase 2 is active and the loadout carried over', phaseInfo.phaseIndex === 1 && phaseInfo.phase === 'p2' && phaseInfo.hp === 5 && phaseInfo.weapon === carriedWeapon, JSON.stringify(phaseInfo));

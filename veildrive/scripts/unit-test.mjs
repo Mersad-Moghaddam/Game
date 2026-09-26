@@ -585,6 +585,49 @@ test('boss: phase 1 throws debris hazard after telegraph', () => {
   assert.equal(spawned.y, 100);
   assert.equal(b.mode, 'gun', 'returns to gun mode after throwing hazard');
 });
+test('boss: recovers to gun mode if damaged to phase 2 during telegraph_debris', () => {
+  const b = new Boss(100, 100);
+  b.hp = 14;
+  b.mode = 'telegraph_debris';
+  b.telegraph = 0.4;
+  b.hp = 8;
+  assert.equal(b.phase, 2);
+  b.update(0.1, bossG);
+  assert.equal(b.mode, 'gun', 'safely recovers to gun mode in phase 2');
+  b.cool = 0;
+  b.update(0.1, bossG);
+  assert.notEqual(b.mode, 'telegraph_debris');
+});
+test('boss: charge pushes scorch decals to fx.decals', () => {
+  const b = new Boss(100, 100);
+  b.hp = 4;
+  b.mode = 'charge';
+  b.chargeT = 0.5;
+  const decals = [];
+  let trimmed = false;
+  const mockG = {
+    ...bossG,
+    fx: {
+      ...bossG.fx,
+      decals,
+      trim() { trimmed = true; }
+    }
+  };
+  b.update(0.016, mockG);
+  assert(decals.length > 0, 'pushes scorch decals during charge');
+  assert.equal(decals[0].color, '#1a1018');
+  assert.equal(trimmed, true);
+});
+test('boss: draw uses upright scale flip instead of rotation for attachments', () => {
+  const b = new Boss(100, 100);
+  b.hp = 4;
+  b.a = Math.PI;
+  const scales = [];
+  const mockCtx = recordingCtx();
+  mockCtx.scale = (x, y) => { scales.push({ x, y }); mockCtx.calls.push('scale'); };
+  b.draw(mockCtx);
+  assert(scales.some(s => s.x === -1 && s.y === 1), 'attachment scaled with dir=-1 when facing left');
+});
 test('boss: stunned state vents steam coolant particles', () => {
   const b = new Boss(100, 100);
   b.stun = 1.0;

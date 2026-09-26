@@ -24,11 +24,7 @@ export class Boss {
   }
 
   get phase() {
-    return this._phase !== undefined ? this._phase : (this.hp > 10 ? 1 : this.hp > 5 ? 2 : 3);
-  }
-
-  set phase(v) {
-    this._phase = v;
+    return this.hp > 10 ? 1 : this.hp > 5 ? 2 : 3;
   }
 
   update(dt, g) {
@@ -47,7 +43,9 @@ export class Boss {
       return;
     }
 
-    this.phase = this.hp > 10 ? 1 : this.hp > 5 ? 2 : 3;
+    if (this.phase >= 2 && this.mode === 'telegraph_debris') {
+      this.mode = 'gun';
+    }
 
     if (this.phase === 1) {
       const n = norm(p.x - this.x, p.y - this.y);
@@ -79,6 +77,8 @@ export class Boss {
           g.audio?.play?.('shotgun');
           this.mode = 'gun';
         }
+      } else {
+        this.mode = 'gun';
       }
     } else if (this.phase === 2) {
       const n = norm(p.x - this.x, p.y - this.y);
@@ -116,6 +116,10 @@ export class Boss {
         this.chargeT -= dt;
         const ox = this.x, oy = this.y;
         g.level.moveCircle(this, Math.cos(this.a) * 440 * dt, Math.sin(this.a) * 440 * dt, this.r);
+        if (g.fx?.decals) {
+          g.fx.decals.push({ x: this.x, y: this.y, r: 10, a: 0.5, color: '#1a1018', painted: false });
+          g.fx.trim?.();
+        }
         if (rng.chance(0.4)) g.fx?.smoke?.(this.x, this.y, this.a + Math.PI);
         if (dist(this, p) < this.r + p.r + 3) p.damage(1, g, this.a);
         const moved = Math.hypot(this.x - ox, this.y - oy);
@@ -125,6 +129,10 @@ export class Boss {
           this.cool = 1.4;
           g.shake?.(8);
           if (moved < 4) {
+            if (g.fx?.decals) {
+              g.fx.decals.push({ x: this.x, y: this.y, r: 14, a: 0.7, color: '#1a1018', painted: false });
+              g.fx.trim?.();
+            }
             g.fx?.ring?.(this.x, this.y, '#ff7a1a', 140, 0.45);
             g.fx?.burst?.(this.x, this.y, 16, '#e0b258', 200, 0.55, 4);
             g.fx?.burst?.(this.x, this.y, 10, '#8c6c52', 140, 0.4, 3);
@@ -132,6 +140,8 @@ export class Boss {
             g.fx?.burst?.(this.x, this.y, 10, '#e0b258', 140, 0.45, 3);
           }
         }
+      } else {
+        this.mode = 'gun';
       }
     } else {
       if (this.mode === 'gun') {
@@ -158,6 +168,10 @@ export class Boss {
         this.chargeT -= dt;
         const ox = this.x, oy = this.y;
         g.level.moveCircle(this, Math.cos(this.a) * 480 * dt, Math.sin(this.a) * 480 * dt, this.r);
+        if (g.fx?.decals) {
+          g.fx.decals.push({ x: this.x, y: this.y, r: 12, a: 0.6, color: '#1a1018', painted: false });
+          g.fx.trim?.();
+        }
         g.fx?.burst?.(this.x, this.y, 2, '#ff2e88', 90, 0.2, 2);
         g.fx?.smoke?.(this.x, this.y, this.a + Math.PI);
         if (dist(this, p) < this.r + p.r + 3) p.damage(1, g, this.a);
@@ -168,6 +182,10 @@ export class Boss {
           this.cool = 1.3;
           g.shake?.(9);
           if (moved < 4) {
+            if (g.fx?.decals) {
+              g.fx.decals.push({ x: this.x, y: this.y, r: 16, a: 0.75, color: '#1a1018', painted: false });
+              g.fx.trim?.();
+            }
             g.fx?.ring?.(this.x, this.y, COLORS.blood, 150, 0.45);
             g.fx?.burst?.(this.x, this.y, 18, '#ff2e88', 210, 0.6, 4);
             g.fx?.burst?.(this.x, this.y, 12, '#e0b258', 170, 0.5, 3);
@@ -175,17 +193,17 @@ export class Boss {
             g.fx?.burst?.(this.x, this.y, 10, '#ff2e88', 140, 0.4, 3);
           }
         }
+      } else {
+        this.mode = 'gun';
       }
     }
   }
 
   damage(n, g, angle = 0) {
     if (this.dead) return;
-    this.phase = this.hp > 10 ? 1 : this.hp > 5 ? 2 : 3;
     const charging = this.mode === 'charge';
     const vulnerable = this.stun > 0 || (!charging && this.phase < 3);
     this.hp -= vulnerable ? n : Math.max(0.25, n * 0.35);
-    this.phase = this.hp > 10 ? 1 : this.hp > 5 ? 2 : 3;
     g.fx?.blood?.(this.x, this.y, 6, angle);
     g.shake?.(3);
     if (this.hp <= 0) {
@@ -200,6 +218,8 @@ export class Boss {
 
   draw(ctx) {
     if (this.dead) return;
+    const flip = Math.cos(this.a) < 0;
+    const dir = flip ? -1 : 1;
     const flash = this.stun > 0;
     const pose = this.stun > 0 ? 'hurt' : (this.mode === 'charge' ? 'run' : 'aim');
     const hpFrac = Math.max(0, this.hp / this.maxHp);
@@ -243,7 +263,7 @@ export class Boss {
     if (this.phase >= 2) {
       ctx.save();
       ctx.translate(this.x, this.y);
-      ctx.rotate(this.a);
+      ctx.scale(dir, 1);
       ctx.fillStyle = '#1c1d24';
       ctx.fillRect(-8, -18, 16, 8);
       ctx.strokeStyle = '#3a3d4a';
@@ -283,7 +303,7 @@ export class Boss {
     if (this.phase === 3) {
       ctx.save();
       ctx.translate(this.x, this.y);
-      ctx.rotate(this.a);
+      ctx.scale(dir, 1);
       const pulse = 0.5 + 0.5 * Math.sin(now / 90);
 
       ctx.strokeStyle = `rgba(255, 30, 60, ${0.7 + 0.3 * pulse})`;
