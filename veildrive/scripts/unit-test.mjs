@@ -482,6 +482,156 @@ test('boss: death reports the kill', () => {
   b.damage(99, { ...bossG, onBossKilled: () => { killed = true; } }, 0);
   assert.equal(b.dead, true); assert.equal(killed, true);
 });
+test('boss: phase transitions at <=10 hp and <=5 hp', () => {
+  const b = new Boss(200, 200);
+  assert.equal(b.phase, 1, 'starts in phase 1');
+  b.damage(7, bossG, 0);
+  assert.equal(b.hp, 9);
+  assert.equal(b.phase, 2, 'transitions to phase 2 at <=10 hp');
+  b.damage(6, bossG, 0);
+  assert.equal(b.hp, 3);
+  assert.equal(b.phase, 3, 'transitions to phase 3 at <=5 hp');
+});
+test('boss: damage scaling and vulnerability when stunned vs charging', () => {
+  const b2 = new Boss(0, 0);
+  b2.hp = 8;
+  b2.mode = 'charge';
+  b2.stun = 0;
+  b2.damage(2, bossG, 0);
+  assert(near(b2.hp, 7.3, 1e-9), 'phase 2 charge resists damage');
+
+  b2.mode = 'stunned';
+  b2.stun = 1.0;
+  b2.damage(2, bossG, 0);
+  assert(near(b2.hp, 5.3, 1e-9), 'phase 2 stunned takes full damage');
+
+  const b3 = new Boss(0, 0);
+  b3.hp = 5;
+  b3.mode = 'charge';
+  b3.stun = 0;
+  b3.damage(2, bossG, 0);
+  assert(near(b3.hp, 4.3, 1e-9), 'phase 3 charge resists damage');
+
+  b3.mode = 'stunned';
+  b3.stun = 1.0;
+  b3.damage(2, bossG, 0);
+  assert(near(b3.hp, 2.3, 1e-9), 'phase 3 stunned takes full damage');
+});
+test('boss: phase 2 emits shockwave ring and rubble burst on wall impact', () => {
+  const b = new Boss(100, 100);
+  b.hp = 8;
+  b.mode = 'charge';
+  b.chargeT = 0.5;
+  b.a = 0;
+
+  const rings = [];
+  const bursts = [];
+  const mockG = {
+    ...bossG,
+    level: {
+      moveCircle(obj, dx, dy, r) { /* wall stops boss */ }
+    },
+    fx: {
+      ...bossG.fx,
+      ring(x, y, color, radius, duration) { rings.push({ x, y, color, radius, duration }); },
+      burst(x, y, count, color, speed, duration, size) { bursts.push({ x, y, count, color, speed, duration, size }); },
+      smoke() {}
+    }
+  };
+
+  b.update(0.016, mockG);
+
+  assert.equal(b.mode, 'stunned', 'wall collision enters stunned state');
+  assert(b.stun > 0, 'boss is stunned');
+  assert(rings.length > 0, 'shockwave ring emitted on wall impact');
+  assert.equal(rings[0].color, '#ff7a1a', 'shockwave ring color is #ff7a1a');
+  assert.equal(rings[0].radius, 140, 'shockwave ring radius is 140');
+  assert(bursts.length > 0, 'rubble burst emitted on wall impact');
+});
+test('boss: phase 3 fires radial multi-shot spread burst', () => {
+  const b = new Boss(100, 100);
+  b.hp = 4;
+  b.mode = 'gun';
+  b.cool = 0;
+
+  const shots = [];
+  const mockG = {
+    ...bossG,
+    enemyShoot(shooter, weapon, angle) { shots.push({ shooter, weapon, angle }); }
+  };
+
+  b.update(0.016, mockG);
+
+  assert.equal(shots.length, 6, 'fires 6-shot radial spread burst');
+  assert.equal(b.mode, 'telegraph', 'transitions to telegraph before charge');
+});
+test('boss: phase 1 throws debris hazard after telegraph', () => {
+  const b = new Boss(100, 100);
+  b.hp = 14; // Phase 1
+  b.mode = 'telegraph_debris';
+  b.telegraph = 0.01;
+  b.a = 0.5;
+
+  let spawned = null;
+  const mockG = {
+    ...bossG,
+    spawnHazard(x, y, a) { spawned = { x, y, a }; }
+  };
+
+  b.update(0.02, mockG);
+
+  assert(spawned !== null, 'debris hazard was spawned');
+  assert.equal(spawned.x, 100);
+  assert.equal(spawned.y, 100);
+  assert.equal(b.mode, 'gun', 'returns to gun mode after throwing hazard');
+});
+test('boss: stunned state vents steam coolant particles', () => {
+  const b = new Boss(100, 100);
+  b.stun = 1.0;
+  b.mode = 'stunned';
+
+  let smoked = 0;
+  const mockG = {
+    ...bossG,
+    fx: {
+      ...bossG.fx,
+      smoke() { smoked++; }
+    }
+  };
+
+  b.update(0.1, mockG);
+
+  assert(smoked > 0, 'smoke/coolant emitted while stunned');
+  assert(near(b.stun, 0.9, 1e-6), 'stun timer decreased');
+});
+test('boss: accents and rendering across all three phases', () => {
+  const b = new Boss(100, 100);
+  b.hp = 15; b.update(0.016, bossG); assert.equal(b.accent(), COLORS.violet);
+  b.hp = 8; b.update(0.016, bossG); assert.equal(b.accent(), COLORS.orange);
+  b.hp = 3; b.update(0.016, bossG); assert.equal(b.accent(), COLORS.blood);
+
+  const mockCtx = recordingCtx();
+  // Phase 1 draw & glow
+  b.hp = 15; b.mode = 'telegraph_debris';
+  b.draw(mockCtx);
+  b.drawGlow(mockCtx);
+  const p1Calls = mockCtx.calls.length;
+  assert(p1Calls > 0);
+
+  // Phase 2 draw (with hydraulic armature) & glow
+  b.hp = 8; b.mode = 'telegraph';
+  b.draw(mockCtx);
+  b.drawGlow(mockCtx);
+  const p2Calls = mockCtx.calls.length - p1Calls;
+  assert(p2Calls > 0);
+
+  // Phase 3 draw (with cyber conduits & scorch marks) & glow
+  b.hp = 3; b.mode = 'charge';
+  b.draw(mockCtx);
+  b.drawGlow(mockCtx);
+  const p3Calls = mockCtx.calls.length - p1Calls - p2Calls;
+  assert(p3Calls > 0);
+});
 
 // ------------------------------------------------------------------ fx
 test('fx: decal and corpse caps with shift-safe painting', () => {
