@@ -11,6 +11,8 @@ export const WEAPONS = {
   suppressed:{id:'suppressed',name:'Suppressed Pistol',kind:'gun',damage:1,rate:0.24,range:820,spread:0.025,mag:8,reload:1.35,noise:170,knock:75,color:'#9ba49a',recoil:0.013,kick:0.9,bloom:0.011,bloomMax:0.055,flash:0.5,pen:0,casing:true,cycle:0.02},
   shotgun:{id:'shotgun',name:'Pump Shotgun',kind:'gun',damage:1,rate:0.72,range:520,spread:0.15,pellets:7,mag:5,reload:1.7,noise:720,knock:260,color:'#c27e46',recoil:0.055,kick:6,bloom:0.055,bloomMax:0.2,flash:1.7,pen:0,casing:true,cycle:0.14},
   smg:{id:'smg',name:'Compact SMG',kind:'gun',damage:1,rate:0.085,range:700,spread:0.09,mag:22,reload:1.65,noise:470,knock:55,color:'#8a9299',recoil:0.026,kick:1,bloom:0.022,bloomMax:0.13,flash:1.1,pen:0,casing:true,cycle:0.01},
-  revolver:{id:'revolver',name:'Heavy Revolver',kind:'gun',damage:2,rate:0.46,range:950,spread:0.02,mag:6,reload:1.9,noise:560,knock:180,color:'#c8baa0',recoil:0.06,kick:4.5,bloom:0.04,bloomMax:0.14,flash:1.5,pen:1,casing:false,cycle:0.06}
+  revolver:{id:'revolver',name:'Heavy Revolver',kind:'gun',damage:2,rate:0.46,range:950,spread:0.02,mag:6,reload:1.9,noise:560,knock:180,color:'#c8baa0',recoil:0.06,kick:4.5,bloom:0.04,bloomMax:0.14,flash:1.5,pen:1,casing:false,cycle:0.06},
+  katana:{id:'katana',name:'Mono-Katana',kind:'melee',damage:3,rate:0.30,range:48,arc:1.35,noise:65,knock:160,color:'#e4e8ec',parry:true},
+  rifle:{id:'rifle',name:'Tactical Burst Rifle',kind:'gun',damage:1,rate:0.36,range:960,spread:0.02,burstCount:3,burstRate:0.065,mag:24,reload:1.75,noise:520,knock:110,color:'#4a5568',recoil:0.03,kick:2.2,bloom:0.02,bloomMax:0.09,flash:1.2,pen:1,casing:true,cycle:0.02}
 };
 export function makeWeapon(id){ const d=WEAPONS[id]; return {...d, ammo:d.mag ?? null, reserve:d.mag ? d.mag*2 : null}; }

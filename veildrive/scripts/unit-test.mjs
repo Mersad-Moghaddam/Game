@@ -95,6 +95,15 @@ test('weapons: makeWeapon ammo + reserve (x2) and melee nulls', () => {
     else { assert.equal(w.ammo, null); assert.equal(w.reserve, null); }
   }
 });
+test('weapons: katana and rifle definitions meet mechanical specs', () => {
+  const katana = makeWeapon('katana');
+  assert(katana && katana.id === 'katana', 'katana weapon exists');
+  assert(katana.kind === 'melee' && katana.damage === 3 && katana.parry, 'katana has high damage and parry trait');
+
+  const rifle = makeWeapon('rifle');
+  assert(rifle && rifle.id === 'rifle', 'rifle weapon exists');
+  assert(rifle.kind === 'gun' && rifle.burstCount === 3 && rifle.pen === 1, 'rifle is 3-round burst penetrating firearm');
+});
 
 // --------------------------------------------------------------- config
 test('config: palette has every required key', () => {
