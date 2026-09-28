@@ -49,7 +49,8 @@ export const LightingShader = {
         float radius = uLightData[i * 2];
         float intensity = uLightData[i * 2 + 1] * (1.0 + 0.5 * uPulse);
         float d = distance(px, uLightPos[i]);
-        float atten = pow(clamp(1.0 - d / radius, 0.0, 1.0), 2.0);
+        float atten = clamp(1.0 - d / radius, 0.0, 1.0);
+        atten *= atten;
         light += uLightColor[i] * atten * intensity;
       }
       if (uFlashOn > 0.5) {

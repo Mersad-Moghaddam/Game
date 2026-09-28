@@ -31,7 +31,27 @@ export class Game {
   // `setSeed` pins the run's RNG stream, so tests (and replays) reproduce a run.
   step(dt = STEP) { this.update(dt); }
   setSeed(n) { this.runSeed = n >>> 0; rng.reseed(this.runSeed); }
-  loop(t) { const raw = Math.min(.25, (t - this.last) / 1000); this.last = t; const a = advance(this.frameAcc, raw, STEP, MAX_STEPS); this.frameAcc = a.acc; for (let i = 0; i < a.steps; i++) { this.update(STEP); this.input.endFrame(); } this.render(); this.frames++; this.fpsT += raw; if (this.fpsT > .5) { this.fps = Math.round(this.frames / this.fpsT); this.frames = 0; this.fpsT = 0; } requestAnimationFrame(x => this.loop(x)); }
+  loop(t) {
+    if (!this.last) this.last = t;
+    const raw = Math.min(.15, (t - this.last) / 1000);
+    this.last = t;
+    const dt = Math.abs(raw - STEP) < 0.002 ? STEP : raw;
+    const a = advance(this.frameAcc, dt, STEP, MAX_STEPS);
+    this.frameAcc = a.acc;
+    for (let i = 0; i < a.steps; i++) {
+      this.update(STEP);
+      this.input.endFrame();
+    }
+    this.render();
+    this.frames++;
+    this.fpsT += raw;
+    if (this.fpsT > .5) {
+      this.fps = Math.round(this.frames / this.fpsT);
+      this.frames = 0;
+      this.fpsT = 0;
+    }
+    requestAnimationFrame(x => this.loop(x));
+  }
   unlockAudio() { this.audio.unlock(); this.audio.apply(); }
   applyDomSettings() { const s = document.getElementById('scanlines'); if (!s) return; const glPost = !!(this.renderer && this.renderer.available) && this.settings.post; s.style.display = glPost ? 'none' : (this.settings.post ? 'block' : 'none'); }
   beatPulse() { return this.settings.music > 0 ? (this.audio.pulse || 0) * Math.min(1, (this.audio.intensity || 0) + .35) : 0; }

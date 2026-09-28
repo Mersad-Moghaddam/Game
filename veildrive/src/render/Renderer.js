@@ -18,7 +18,7 @@ export class Renderer {
     this.quality = 1;
     this.postEnabled = true;
     try {
-      this.renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: false, alpha: false, preserveDrawingBuffer: true });
+      this.renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: false, alpha: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
     } catch (err) {
       this.error = err;
       return;
@@ -48,7 +48,7 @@ export class Renderer {
     this.lightPass.uniforms.uResolution.value.set(this.w, this.h);
     this.composer.addPass(this.lightPass);
 
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(this.ow, this.oh), 0.9, 0.55, 0.62);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(Math.floor(this.ow / 2), Math.floor(this.oh / 2)), 0.85, 0.5, 0.62);
     this.composer.addPass(this.bloom);
     this.crt = new ShaderPass(CRTShader);
     this.crt.uniforms.uResolution.value.set(this.ow, this.oh);
@@ -119,6 +119,7 @@ export class Renderer {
     }
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
+    if (this.bloom) this.bloom.setSize(Math.floor(w / 2), Math.floor(h / 2));
     this.crt.uniforms.uResolution.value.set(w, h);
     this.glitchT = 0;
   }
