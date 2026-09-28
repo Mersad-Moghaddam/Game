@@ -141,7 +141,15 @@ export class Renderer {
   }
 
   dispose() {
-    if (this.available) this.renderer.dispose();
+    if (this.available) {
+      this.albedo?.texture?.dispose();
+      this.emissive?.texture?.dispose();
+      this.albedoMesh?.geometry?.dispose();
+      this.albedoMesh?.material?.dispose();
+      this.composer?.dispose?.();
+      this.renderer.dispose();
+      this.available = false;
+    }
   }
 }
 

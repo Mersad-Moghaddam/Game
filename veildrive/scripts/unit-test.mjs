@@ -21,6 +21,10 @@ import { Enemy } from '../src/entities/Enemy.js';
 import { Boss } from '../src/entities/Boss.js';
 import { loadSave, storeSave } from '../src/core/Save.js';
 
+import { Game } from '../src/core/Game.js';
+import { RunStateSystem } from '../src/core/RunState.js';
+import { AudioSystem } from '../src/core/Audio.js';
+
 let passed = 0; const failures = [];
 function test(name, fn) { try { fn(); passed++; } catch (e) { failures.push(`${name} :: ${e.message}`); } }
 const near = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
@@ -1641,6 +1645,220 @@ test('level: bake renders wall base ambient occlusion drop shadow', () => {
   level.bake(ctx);
   const hasAO = fills.some(f => typeof f === 'string' && (f.includes('0,0,0,0.35') || f.includes('0, 0, 0, 0.35')));
   assert(hasAO, 'wall base AO drop shadow band rendered in bake()');
+});
+
+// --------------------------------------------------------------- bug regression tests
+test('combat: thrown weapon landing preserves ammo and reserve (no infinite ammo exploit)', () => {
+  const g = {
+    level: { pickups: [], bulletHit: () => null },
+    enemies: [],
+    boss: null,
+    player: { thrownBonus: 0 },
+    thrown: [{ x: 100, y: 100, vx: 10, vy: 0, life: -0.1, weapon: { id: 'shotgun', kind: 'gun', ammo: 1, reserve: 0 }, dropped: false }]
+  };
+  Object.assign(g, CombatSystem);
+  g.updateThrown(0.1);
+  assert.equal(g.level.pickups.length, 1, 'pickup created when thrown weapon lands');
+  const p = g.level.pickups[0];
+  assert.equal(p.weapon.ammo, 1, 'ammo should be preserved');
+  assert.equal(p.weapon.reserve, 0, 'reserve should be preserved');
+});
+
+test('player: empty gun trigger click plays empty audio and sets cooldown (no soft-loop)', () => {
+  let played = null;
+  const g = {
+    input: { mouse: { left: true, moved: false }, down: () => false, tap: () => false },
+    screenToWorld: () => ({ x: 200, y: 100 }),
+    audio: { play: id => { played = id; } },
+    level: { moveCircle: () => {} },
+    shake: () => {},
+    emitNoise: () => {},
+    fireWeapon: () => {}
+  };
+  const p = new Player(100, 100);
+  p.current = { id: 'pistol', kind: 'gun', ammo: 0, reserve: 0, mag: 9, reload: 1.25, rate: 0.2 };
+  p.attackCd = 0;
+  p.reloadT = 0;
+  p.update(1 / 60, g);
+  assert.equal(played, 'empty', 'empty click sound should play when trigger pulled on empty gun');
+  assert(p.attackCd > 0, 'attack cooldown should be set after dry-firing');
+});
+
+test('combat: thrown weapons hit and damage boss', () => {
+  const boss = new Boss(200, 200);
+  const hp0 = boss.hp;
+  const g = {
+    level: { pickups: [], bulletHit: () => null },
+    enemies: [],
+    boss,
+    player: { thrownBonus: 0 },
+    fx: { burst: () => {} },
+    audio: { play: () => {} },
+    thrown: [{ x: 195, y: 200, vx: 400, vy: 0, life: 0.5, weapon: { id: 'cleaver', kind: 'melee', damage: 3 }, dropped: false }]
+  };
+  Object.assign(g, CombatSystem);
+  g.updateThrown(0.05);
+  assert(boss.hp < hp0, 'boss should take damage from thrown weapon');
+});
+
+test('combat: breaker box electrical arcs stun the boss', () => {
+  const boss = new Boss(120, 100);
+  boss.stun = 0;
+  const g = {
+    enemies: [],
+    boss,
+    level: { props: [] },
+    fx: { burst: () => {}, flash: () => {} },
+    shake: () => {},
+    audio: { play: () => {} },
+    renderer: null
+  };
+  Object.assign(g, CombatSystem);
+  g.triggerBreaker({ x: 100, y: 100, w: 20, h: 20, broken: false });
+  assert(boss.stun >= 1.2, 'boss within breaker radius should be stunned');
+});
+
+test('combat: explosions damage and chain-detonate nearby barrels/props', () => {
+  const b1 = { x: 100, y: 100, w: 24, h: 24, type: 'barrel', solid: true, hp: 1, broken: false };
+  const b2 = { x: 130, y: 100, w: 24, h: 24, type: 'barrel', solid: true, hp: 1, broken: false };
+  let chainExplosions = 0;
+  const g = {
+    enemies: [],
+    boss: null,
+    player: { dead: false, x: 0, y: 0, r: 13, damage: () => {} },
+    level: {
+      props: [b1, b2],
+      damageProp: (p, amt) => {
+        p.hp -= amt;
+        if (p.hp <= 0) { p.broken = true; return true; }
+        return false;
+      }
+    },
+    fx: { burst: () => {}, ring: () => {}, flash: () => {} },
+    shake: () => {},
+    emitNoise: () => {},
+    hitStop: () => {},
+    audio: { play: () => {} },
+    explodeAt(x, y) {
+      chainExplosions++;
+      CombatSystem.explodeAt.call(this, x, y);
+    }
+  };
+  g.explodeAt(105, 105);
+  assert(b1.broken, 'first barrel broke');
+  assert(b2.broken, 'second barrel broke from chain detonation');
+  assert(chainExplosions >= 2, 'chain explosion triggered');
+});
+
+test('player: arrow keys move the player', () => {
+  const g = {
+    input: {
+      mouse: { moved: false },
+      down: k => k === 'ArrowRight' || k === 'ArrowDown',
+      tap: () => false
+    },
+    screenToWorld: () => ({ x: 0, y: 0 }),
+    level: { moveCircle: (e, dx, dy) => { e.x += dx; e.y += dy; } },
+    emitNoise: () => {},
+    audio: { play: () => {} }
+  };
+  const p = new Player(100, 100);
+  p.update(1 / 60, g);
+  assert(p.vx > 0, 'vx should be positive when ArrowRight is down');
+  assert(p.vy > 0, 'vy should be positive when ArrowDown is down');
+});
+
+test('game: updateReinforcements safely handles empty points or types array', () => {
+  const g = {
+    mission: {
+      goal: { type: 'survive' },
+      reinforce: { every: 0.1, max: 5, points: [], types: [] }
+    },
+    goalDone: false,
+    _reinforceT: 0,
+    _reinforceIdx: 0,
+    enemies: [],
+    boss: null
+  };
+  assert.doesNotThrow(() => {
+    Game.prototype.updateReinforcements.call(g, 0.2);
+  }, 'should not throw when reinforcement points or types are empty');
+});
+
+test('runstate: updateUpgrade ignores mouse clicks outside card bounding boxes', () => {
+  const g = {
+    state: 'upgrade',
+    input: {
+      mouse: { leftPressed: true, x: 50, y: 500 }, // outside y range 165..355 and x range
+      tap: () => false
+    },
+    upgradeChoices: [UPGRADES[0], UPGRADES[1], UPGRADES[2]],
+    activeUpgrades: [],
+    player: new Player(0, 0),
+    audio: { play: () => {} },
+    startMission: () => { g.state = 'playing'; }
+  };
+  Object.assign(g, RunStateSystem);
+  g.updateUpgrade();
+  assert.equal(g.state, 'upgrade', 'upgrade should not be selected when clicking outside card bounds');
+});
+
+test('runstate: accuracy metric is clamped to 100% even with pierce and deflections', () => {
+  const g = {
+    shots: 4,
+    hits: 12,
+    score: 1000,
+    maxCombo: 5,
+    deaths: 0,
+    weaponKinds: new Set(),
+    stealthKills: 0,
+    missionsCleared: 5,
+    save: { runs: 0, unlockedMasks: [], highScore: 0, bestRank: 'D' },
+    audio: { setIntensity: () => {} },
+    state: 'playing'
+  };
+  Object.assign(g, RunStateSystem);
+  g.finishCampaign();
+  assert.equal(g.results.accuracy, 100, 'accuracy percentage should be clamped to 100');
+});
+
+test('boss: phase 2 transition clears remaining burst recoil', () => {
+  const b = new Boss(200, 200);
+  b.burst = 3;
+  b.damage(7, { fx: { blood: () => {} }, shake: () => {} });
+  assert.equal(b.phase, 2, 'transitions to phase 2');
+  b.update(0.1, { player: { dead: false, x: 0, y: 0 }, level: { moveCircle: () => {} } });
+  assert.equal(b.burst, 0, 'burst should be cleared in phase 2');
+});
+
+test('audio: dispose cleans up beat timer and closes context safely', () => {
+  const a = new AudioSystem({ master: 1, music: 1, sfx: 1 });
+  let closed = false;
+  a.ctx = { state: 'running', close: () => { closed = true; } };
+  a.beatTimer = setInterval(() => {}, 1000);
+  a.started = true;
+  a.dispose();
+  assert.equal(closed, true, 'audio context should be closed');
+  assert.equal(a.started, false, 'started state should be false');
+});
+
+test('combat: ricochet correctly inverts vx when hitting vertical wall face', () => {
+  const wall = { x: 300, y: 100, w: 28, h: 400 };
+  const g = {
+    level: {
+      bulletHit: (x1, y1, x2, y2) => (x2 >= 300 ? wall : null),
+      damageProp: () => false
+    },
+    enemies: [],
+    boss: null,
+    player: { dead: false },
+    fx: { burst: () => {} },
+    projectiles: [{ x: 295, y: 150, px: 295, py: 150, vx: 50, vy: 500, ricochet: 1, life: 1, fromPlayer: true, owner: 'player' }]
+  };
+  Object.assign(g, CombatSystem);
+  g.updateProjectiles(0.2); // moves x from 295 to 305, hitting wall
+  const p = g.projectiles[0];
+  assert(p.vx < 0, 'vx should be inverted to negative after hitting vertical wall from the left');
 });
 
 

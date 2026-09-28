@@ -28,7 +28,14 @@ export const RunStateSystem = {
     this.level = new Level(def); this.nav = new NavGrid(this.level);
     const sp = this.level.findOpen(def.spawn.x, def.spawn.y, 14);
     if (fresh || !this.player) { this.player = new Player(sp.x, sp.y); this.applyMask(); }
-    else { this.player.x = sp.x; this.player.y = sp.y; this.player.dead = false; this.player.hp = respawn ? this.player.maxHp : Math.min(this.player.maxHp, this.player.hp + 1); }
+    else {
+      this.player.x = sp.x; this.player.y = sp.y; this.player.dead = false;
+      this.player.hp = respawn ? this.player.maxHp : Math.min(this.player.maxHp, this.player.hp + 1);
+      if (respawn && this.player.current && this.player.current.kind === 'gun' && this.player.current.ammo === 0 && this.player.current.reserve === 0) {
+        this.player.current.ammo = this.player.magOf(this.player.current);
+        this.player.current.reserve = this.player.current.ammo;
+      }
+    }
     this.player.a = this.level.entryFacing();
     this.player.vx = 0; this.player.vy = 0; this.player.invuln = .7; this.player.dashCd = 0; this.player.dashTimer = 0; this.player.reloadT = 0; this.player.reloadWeapon = null; this.player.attackCd = 0; this.player.animT = 0;
     this.enemies = []; this.boss = null; this.projectiles = []; this.thrown = []; this.hazards = []; this.target = null;
@@ -77,8 +84,16 @@ export const RunStateSystem = {
   updateUpgrade() {
     let idx = -1;
     if (this.input.tap('Digit1')) idx = 0; if (this.input.tap('Digit2')) idx = 1; if (this.input.tap('Digit3')) idx = 2;
-    if (this.input.mouse.leftPressed) { const x = this.input.mouse.x; idx = clamp(Math.floor((x - 135) / 235), 0, 2); }
-    if (idx >= 0) {
+    if (this.input.mouse.leftPressed) {
+      const { x, y } = this.input.mouse;
+      if (y >= 165 && y <= 355) {
+        for (let i = 0; i < 3; i++) {
+          const cx = 135 + i * 235;
+          if (x >= cx && x <= cx + 205) { idx = i; break; }
+        }
+      }
+    }
+    if (idx >= 0 && this.upgradeChoices && this.upgradeChoices[idx]) {
       const u = this.upgradeChoices[idx]; u.apply(this.player); this.activeUpgrades.push(u.id);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
       this.audio.play('pickup'); this.startMission(this.missionIndex + 1, false);
@@ -92,7 +107,7 @@ export const RunStateSystem = {
     this.audio.setIntensity(.05); this.shake(14); this.hitStop(.05); this.renderer?.glitch?.(1);
   },
   finishCampaign() {
-    const acc = this.shots ? this.hits / this.shots : 1;
+    const acc = this.shots ? clamp(this.hits / this.shots, 0, 1) : 1;
     let value = this.score + this.maxCombo * 90 + acc * 700 - this.deaths * 450;
     let rank = 'D'; if (value > 3000) rank = 'C'; if (value > 4800) rank = 'B'; if (value > 6500) rank = 'A'; if (value > 8200) rank = 'S'; if (value > 10000) rank = 'S+';
     const unlocks = [];

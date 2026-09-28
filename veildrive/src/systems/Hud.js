@@ -92,8 +92,13 @@ c.fillText(last ? 'FINAL RESULTS…' : boundary ? `NEXT PHASE: ${PHASES[phaseOfM
       }
       target = best;
     } else if (!this.goalDone && this.mission && this.mission.goal.type === 'target' && this.target && !this.target.dead) target = this.target;
+    else if (!this.goalDone && this.mission && this.mission.goal.type === 'boss' && this.boss && !this.boss.dead) target = this.boss;
     else if (this.goalDone && this.level.exit.active) target = this.level.exit;
-    if (target) { const s = w2s(target.x, target.y); if (s.x < mx || s.x > VIRTUAL_W - mx || s.y < my || s.y > VIRTUAL_H - my) chevron(s.x, s.y, COLORS.cyan); }
+    if (target) { const s = w2s(target.x, target.y); if (s.x < mx || s.x > VIRTUAL_W - mx || s.y < my || s.y > VIRTUAL_H - my) chevron(s.x, s.y, target === this.boss ? COLORS.magenta : COLORS.cyan); }
+    if (this.boss && !this.boss.dead && target !== this.boss) {
+      const s = w2s(this.boss.x, this.boss.y);
+      if (s.x < mx || s.x > VIRTUAL_W - mx || s.y < my || s.y > VIRTUAL_H - my) chevron(s.x, s.y, COLORS.magenta);
+    }
     for (const e of this.enemies) { if (e.dead || e.state !== 'COMBAT') continue; const s = w2s(e.x, e.y); if (s.x < mx || s.x > VIRTUAL_W - mx || s.y < my || s.y > VIRTUAL_H - my) chevron(s.x, s.y, COLORS.blood); }
     const alive = this.enemies.filter(e => !e.dead).length + (this.boss && !this.boss.dead ? 1 : 0);
     c.save(); c.textAlign = 'right'; c.font = 'bold 12px monospace'; c.fillStyle = this.boss && !this.boss.dead ? COLORS.magenta : (alive ? COLORS.orange : COLORS.cyan);

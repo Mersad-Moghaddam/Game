@@ -31,8 +31,13 @@ export class Boss {
     if (this.dead || g.player.dead) return;
     if (!Number.isFinite(this.cool)) this.cool = 0;
     if (!Number.isFinite(this.stun) || this.stun < 0) this.stun = 0;
+    if (!Number.isFinite(this.telegraph) || this.telegraph < 0) this.telegraph = 0;
+    if (!Number.isFinite(this.chargeT) || this.chargeT < 0) this.chargeT = 0;
+    if (!Number.isFinite(this.a)) this.a = 0;
     const p = g.player, d = dist(this, p);
     this.cool -= dt;
+
+    if (this.phase >= 2) this.burst = 0;
 
     if (this.stun > 0) {
       this.stun -= dt;

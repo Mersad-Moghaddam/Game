@@ -39,17 +39,18 @@ export class Player{
     }
     const mw=g.screenToWorld(i.mouse.x,i.mouse.y);if(i.mouse.moved)this.a=Math.atan2(mw.y-this.y,mw.x-this.x);
     if(this.reloadT>0){this.reloadT-=dt;if(this.reloadT<=0){const rw=this.reloadWeapon;const mag=rw?this.magOf(rw):0;if(rw&&rw.kind==='gun'&&rw.ammo<mag&&rw.reserve>0){const need=mag-rw.ammo,take=Math.min(need,rw.reserve);rw.ammo+=take;rw.reserve-=take;g.audio.play('reload')}this.reloadWeapon=null}}
-    let x=(i.down('KeyD')?1:0)-(i.down('KeyA')?1:0),y=(i.down('KeyS')?1:0)-(i.down('KeyW')?1:0);const n=norm(x,y);const moving=!!(x||y);if(!moving){n.x=0;n.y=0}
+    let x=((i.down('KeyD')||i.down('ArrowRight'))?1:0)-((i.down('KeyA')||i.down('ArrowLeft'))?1:0),
+        y=((i.down('KeyS')||i.down('ArrowDown'))?1:0)-((i.down('KeyW')||i.down('ArrowUp'))?1:0);
+    const n=norm(x,y);const moving=!!(x||y);if(!moving){n.x=0;n.y=0}
     this.animT+=(moving?9:2)*dt;
     if(i.tap('ShiftLeft')||i.tap('ShiftRight'))this.startDash(n,g);
     if(this.dashTimer>0){this.dashTimer-=dt;g.level.moveCircle(this,this.dashV.x*dt,this.dashV.y*dt);g.fx.ghost(this.x,this.y,this.a);}
     else{g.level.moveCircle(this,n.x*this.moveSpeed*dt,n.y*this.moveSpeed*dt);if(moving){this.stepT-=dt;if(this.stepT<=0){this.stepT=.32;g.emitNoise(this.x,this.y,55*this.noiseMul,'step');g.audio.play('step')}}}
     // Holding attack is one continuous intent: firearms auto-fire (and
     // auto-reload an empty magazine if reserve remains) and melee weapons
-    // swing repeatedly. Previously melee only fired on the initial press and
-    // an empty gun did nothing on hold, which read as "it doesn't shoot".
+    // swing repeatedly.
     if(i.mouse.left&&this.attackCd<=0&&this.reloadT<=0){
-      if(this.current.kind==='gun'){if(this.current.ammo<=0)this.reload(g);else this.shoot(g);}
+      if(this.current.kind==='gun')this.shoot(g);
       else this.melee(g);
     }
     if(i.mouse.rightPressed&&this.attackCd<=0)this.throwCurrent(g);

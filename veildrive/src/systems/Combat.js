@@ -107,13 +107,18 @@ export const CombatSystem = {
       if (wall) { t.x = ox; t.y = oy; t.life = 0; this.fx.burst(t.x, t.y, 7, '#aaa', 100, .3, 2); }
       for (const e of this.enemies) {
         if (!e.dead && dist(t, e) < e.r + 8) {
-          if (t.weapon.kind === 'melee') e.damage((t.weapon.damage >= 2 ? 2 : 1) + this.player.thrownBonus, this, Math.atan2(t.vy, t.vx), 200);
-          else if (this.player.thrownBonus) e.damage(this.player.thrownBonus, this, Math.atan2(t.vy, t.vx), 180);
+          if (t.weapon.kind === 'melee') e.damage((t.weapon.damage >= 2 ? 2 : 1) + (this.player?.thrownBonus || 0), this, Math.atan2(t.vy, t.vx), 200);
+          else if (this.player?.thrownBonus) e.damage(this.player.thrownBonus, this, Math.atan2(t.vy, t.vx), 180);
           else e.stunHit(this, Math.atan2(t.vy, t.vx), 190);
           t.life = 0; break;
         }
       }
-      if (t.life <= 0 && !t.dropped) { t.dropped = true; this.level.pickups.push({ x: t.x, y: t.y, weapon: makeWeapon(t.weapon.id) }); }
+      if (this.boss && !this.boss.dead && t.life > 0 && dist(t, this.boss) < this.boss.r + 8) {
+        const dmg = (t.weapon.kind === 'melee' ? (t.weapon.damage >= 2 ? 2 : 1) : 1) + (this.player?.thrownBonus || 0);
+        this.boss.damage(dmg, this, Math.atan2(t.vy, t.vx));
+        t.life = 0;
+      }
+      if (t.life <= 0 && !t.dropped) { t.dropped = true; this.level.pickups.push({ x: t.x, y: t.y, weapon: { ...t.weapon } }); }
     }
     this.thrown = this.thrown.filter(t => t.life > 0);
   },
@@ -132,6 +137,17 @@ export const CombatSystem = {
     for (const e of this.enemies) { if (!e.dead && dist(e, { x, y }) < 92) e.damage(3, this, Math.atan2(e.y - y, e.x - x), 320); }
     if (this.boss && !this.boss.dead && dist(this.boss, { x, y }) < 100) this.boss.damage(3, this, 0);
     if (!this.player.dead && dist(this.player, { x, y }) < 84 && !this.invincible) this.player.damage(1, this, Math.atan2(this.player.y - y, this.player.x - x));
+    if (this.level?.props) {
+      for (const p of this.level.props) {
+        if (!p.broken && dist({ x, y }, { x: p.x + p.w / 2, y: p.y + p.h / 2 }) < 95) {
+          if (this.level.damageProp(p, 3)) {
+            if (p.type === 'barrel') this.explodeAt(p.x + p.w / 2, p.y + p.h / 2);
+            if (p.type === 'breaker') this.triggerBreaker(p);
+            if (p.type === 'glass') this.audio?.play?.('glass');
+          }
+        }
+      }
+    }
   },
   triggerBreaker(p) {
     if (!p) return;
@@ -148,6 +164,9 @@ export const CombatSystem = {
         enemy.state = 'COMBAT';
       }
     }
+    if (this.boss && !this.boss.dead && dist(this.boss, { x: cx, y: cy }) <= 220) {
+      this.boss.stun = Math.max(this.boss.stun || 0, 1.2);
+    }
   },
   updateProjectiles(dt) {
     for (const b of this.projectiles) {
@@ -160,7 +179,17 @@ export const CombatSystem = {
           if (wall.type === 'barrel') this.explodeAt(wall.x + wall.w / 2, wall.y + wall.h / 2);
           if (wall.type === 'breaker') this.triggerBreaker(wall);
         }
-        if (b.ricochet > 0) { b.ricochet--; if (Math.abs(b.vx) > Math.abs(b.vy)) b.vx *= -1; else b.vy *= -1; b.x = ox; b.y = oy; this.fx.burst(ox, oy, 6, '#f0c66d', 100, .2, 2); }
+        if (b.ricochet > 0) {
+          b.ricochet--;
+          if (wall && 'x' in wall && 'w' in wall) {
+            if (ox < wall.x || ox > wall.x + wall.w) b.vx *= -1;
+            else b.vy *= -1;
+          } else {
+            if (Math.abs(b.vx) > Math.abs(b.vy)) b.vx *= -1; else b.vy *= -1;
+          }
+          b.x = ox; b.y = oy;
+          this.fx.burst(ox, oy, 6, '#f0c66d', 100, .2, 2);
+        }
         else b.life = 0;
       }
       if (b.life <= 0) continue;

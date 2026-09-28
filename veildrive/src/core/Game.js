@@ -23,7 +23,15 @@ export const STEP = 1 / 60;
 export const MAX_STEPS = 5;
 
 export class Game {
-  constructor(canvas, renderer) { this._reinforceT = 0; this._reinforceIdx = 0; this.canvas = canvas; this.renderer = renderer || null; this.ctx = canvas.getContext('2d', { alpha: false }); this.ctx.imageSmoothingEnabled = false; this.input = new Input(renderer && renderer.available ? renderer.canvas : canvas); this.save = loadSave(); this.settings = this.save.settings; this.audio = new AudioSystem(this.settings); this.fx = new FX(); this.fx.bloodEnabled = this.settings.blood; this.fx.quality = this.settings.quality; this.applyDomSettings(); this.state = 'menu'; this.menuIndex = 0; this.settingsIndex = 0; this.pauseIndex = 0; this.cam = { x: 0, y: 0, tx: 0, ty: 0 }; this.shakeMag = 0; this.shakeX = 0; this.shakeY = 0; this.debug = false; this.invincible = false; this.heartT = 0; this.last = performance.now(); this.acc = 0; this.frameAcc = 0; this.aiStep = .1; this.runSeed = null; this._projFree = []; this.fps = 60; this.fpsT = 0; this.frames = 0; this.uiCanvas = document.getElementById('ui'); this.uiCtx = this.uiCanvas ? this.uiCanvas.getContext('2d') : this.ctx; if (this.uiCtx) this.uiCtx.imageSmoothingEnabled = false; this.applyRenderSettings(); this.resize(); addEventListener('resize', () => this.resize()); }
+  constructor(canvas, renderer) { this._reinforceT = 0; this._reinforceIdx = 0; this.canvas = canvas; this.renderer = renderer || null; this.ctx = canvas.getContext('2d', { alpha: false }); this.ctx.imageSmoothingEnabled = false; this.input = new Input(renderer && renderer.available ? renderer.canvas : canvas); this.save = loadSave(); this.settings = this.save.settings; this.audio = new AudioSystem(this.settings); this.fx = new FX(); this.fx.bloodEnabled = this.settings.blood; this.fx.quality = this.settings.quality; this.applyDomSettings(); this.state = 'menu'; this.menuIndex = 0; this.settingsIndex = 0; this.pauseIndex = 0; this.cam = { x: 0, y: 0, tx: 0, ty: 0 }; this.shakeMag = 0; this.shakeX = 0; this.shakeY = 0; this.debug = false; this.invincible = false; this.heartT = 0; this.last = performance.now(); this.acc = 0; this.frameAcc = 0; this.aiStep = .1; this.runSeed = null; this._projFree = []; this.fps = 60; this.fpsT = 0; this.frames = 0; this.uiCanvas = document.getElementById('ui'); this.uiCtx = this.uiCanvas ? this.uiCanvas.getContext('2d') : this.ctx; if (this.uiCtx) this.uiCtx.imageSmoothingEnabled = false; this.applyRenderSettings(); this.resize();   this._resizeHandler = () => this.resize();
+  addEventListener('resize', this._resizeHandler);
+}
+destroy() {
+  if (this._resizeHandler) removeEventListener('resize', this._resizeHandler);
+  this.input?.destroy?.();
+  this.audio?.dispose?.();
+  this.renderer?.dispose?.();
+}
   applyRenderSettings() { if (!this.renderer || !this.renderer.available) return; this.renderer.setPost(!!this.settings.post); this.renderer.setQuality(this.settings.quality); this.renderer.setPixelMode(this.settings.pixel !== false); }
   resize() { const ratio = VIRTUAL_W / VIRTUAL_H, w = innerWidth, h = innerHeight; let cw = w, ch = w / ratio; if (ch > h) { ch = h; cw = h * ratio; } const size = { width: `${Math.floor(cw)}px`, height: `${Math.floor(ch)}px` }; for (const id of ['game', 'gl', 'ui']) { const el = document.getElementById(id); if (el) Object.assign(el.style, size); } }
   start() { requestAnimationFrame(t => this.loop(t)); }
@@ -80,7 +88,8 @@ export class Game {
     this.shakeMag *= Math.pow(.025, dt); this.shakeX = rand(-this.shakeMag, this.shakeMag); this.shakeY = rand(-this.shakeMag, this.shakeMag);
   }
   updateReinforcements(dt) {
-    const r = this.mission && this.mission.reinforce; if (!r || this.goalDone) return;
+    const r = this.mission && this.mission.reinforce;
+    if (!r || !r.points?.length || !r.types?.length || this.goalDone) return;
     this._reinforceT += dt;
     if (this._reinforceT < r.every) return;
     this._reinforceT -= r.every;
@@ -91,7 +100,26 @@ export class Game {
     const type = r.types[rng.int(r.types.length)];
     this.enemies.push(applyPhaseToEnemy(new Enemy(spot.x, spot.y, type, []), phaseDifficulty(this.phaseIndex)));
   }
-  updateMenu() { const items = 5; if (this.input.tap('ArrowDown') || this.input.tap('KeyS')) { this.menuIndex = (this.menuIndex + 1) % items; this.audio.play('ui'); } if (this.input.tap('ArrowUp') || this.input.tap('KeyW')) { this.menuIndex = (this.menuIndex + items - 1) % items; this.audio.play('ui'); } if (this.menuIndex === 1 && (this.input.tap('ArrowLeft') || this.input.tap('KeyA'))) this.cycleMask(-1); if (this.menuIndex === 1 && (this.input.tap('ArrowRight') || this.input.tap('KeyD'))) this.cycleMask(1); if (this.input.tap('Enter') || this.input.mouse.leftPressed) { if (this.input.mouse.leftPressed) { const y = this.input.mouse.y; this.menuIndex = clamp(Math.floor((y - 270) / 40), 0, 4); } if (this.menuIndex === 0) this.startRun(); if (this.menuIndex === 1) this.cycleMask(1); if (this.menuIndex === 2) this.state = 'settings'; if (this.menuIndex === 3) this.state = 'credits'; if (this.menuIndex === 4) location.reload(); } }
+  updateMenu() {
+    const items = 5;
+    if (this.input.tap('ArrowDown') || this.input.tap('KeyS')) { this.menuIndex = (this.menuIndex + 1) % items; this.audio.play('ui'); }
+    if (this.input.tap('ArrowUp') || this.input.tap('KeyW')) { this.menuIndex = (this.menuIndex + items - 1) % items; this.audio.play('ui'); }
+    if (this.menuIndex === 1 && (this.input.tap('ArrowLeft') || this.input.tap('KeyA'))) this.cycleMask(-1);
+    if (this.menuIndex === 1 && (this.input.tap('ArrowRight') || this.input.tap('KeyD'))) this.cycleMask(1);
+    if (this.input.tap('Enter') || this.input.mouse.leftPressed) {
+      if (this.input.mouse.leftPressed) {
+        const { x, y } = this.input.mouse;
+        if (x >= 350 && x <= 610 && y >= 250 && y <= 480) {
+          this.menuIndex = clamp(Math.floor((y - 270) / 40), 0, 4);
+        }
+      }
+      if (this.menuIndex === 0) this.startRun();
+      if (this.menuIndex === 1) this.cycleMask(1);
+      if (this.menuIndex === 2) this.state = 'settings';
+      if (this.menuIndex === 3) this.state = 'credits';
+      if (this.menuIndex === 4) location.reload();
+    }
+  }
   updateSettings() { const keys = ['master', 'music', 'sfx', 'shake', 'blood', 'quality', 'post', 'pixel', 'flashes', 'highContrastCursor']; if (this.input.tap('Escape')) { this.save.settings = this.settings; storeSave(this.save); this.state = 'menu'; return; } if (this.input.tap('ArrowDown') || this.input.tap('KeyS')) this.settingsIndex = (this.settingsIndex + 1) % keys.length; if (this.input.tap('ArrowUp') || this.input.tap('KeyW')) this.settingsIndex = (this.settingsIndex + keys.length - 1) % keys.length; const k = keys[this.settingsIndex], dir = (this.input.tap('ArrowRight') || this.input.tap('KeyD') ? 1 : 0) - (this.input.tap('ArrowLeft') || this.input.tap('KeyA') ? 1 : 0); if (dir) { if (typeof this.settings[k] === 'boolean') this.settings[k] = !this.settings[k]; else this.settings[k] = clamp(this.settings[k] + dir * .1, 0, 1); this.audio.apply(); this.fx.bloodEnabled = this.settings.blood; this.fx.quality = this.settings.quality; this.applyDomSettings(); this.applyRenderSettings(); this.audio.play('ui'); } }
   // Single source of truth for the simulated scene, shared by the WebGL and
   // Canvas fallback paths.
@@ -112,7 +140,10 @@ export class Game {
     let c = out;
     if (this.settings.pixel !== false && PIXEL > 1) { if (!this.pixCanvas) { this.pixCanvas = document.createElement('canvas'); this.pixCanvas.width = VIEW_W; this.pixCanvas.height = VIEW_H; this.pixCtx = this.pixCanvas.getContext('2d'); this.pixCtx.imageSmoothingEnabled = false; } c = this.pixCtx; c.setTransform(1 / PIXEL, 0, 0, 1 / PIXEL, 0, 0); }
     c.fillStyle = '#05060a'; c.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H);
-    this.ensureWorld(); c.drawImage(this.worldCanvas, this.cam.x - this.shakeX, this.cam.y - this.shakeY, VIRTUAL_W, VIRTUAL_H, 0, 0, VIRTUAL_W, VIRTUAL_H);
+    this.ensureWorld();
+    const sx = clamp(this.cam.x - this.shakeX, 0, Math.max(0, this.level.w - VIRTUAL_W));
+    const sy = clamp(this.cam.y - this.shakeY, 0, Math.max(0, this.level.h - VIRTUAL_H));
+    c.drawImage(this.worldCanvas, sx, sy, VIRTUAL_W, VIRTUAL_H, 0, 0, VIRTUAL_W, VIRTUAL_H);
     c.save(); c.translate(-this.cam.x + this.shakeX, -this.cam.y + this.shakeY); this.drawActors(c); c.restore();
     this.drawLighting(c); this.drawHUD(c); if (this.state === 'playing') this.drawIntro(c); if (this.state === 'interlude') this.drawInterlude(c); if (this.state === 'upgrade') this.drawUpgrade(c); if (this.state === 'phase') this.drawPhase(c); if (this.state === 'paused') this.drawPause(c); if (this.player.dead) this.drawDeath(c); this.drawPost(c); if (this.debug) this.drawDebug(c);
     if (c !== out) { out.setTransform(1, 0, 0, 1, 0, 0); out.imageSmoothingEnabled = false; out.drawImage(this.pixCanvas, 0, 0, VIRTUAL_W, VIRTUAL_H); }
@@ -128,8 +159,11 @@ export class Game {
     if (this.state === 'credits') { this.drawMenuWorld(c); this.renderer.render(); this.drawCredits(ui); return; }
     if (this.state === 'results') { this.drawResultsWorld(c); this.renderer.render(); this.drawResults(ui); return; }
     if (!this.level) { this.renderer.render(); return; }
-    this.ensureWorld(); const ox = -this.cam.x + this.shakeX, oy = -this.cam.y + this.shakeY;
-    c.drawImage(this.worldCanvas, this.cam.x - this.shakeX, this.cam.y - this.shakeY, VIRTUAL_W, VIRTUAL_H, 0, 0, VIRTUAL_W, VIRTUAL_H);
+    this.ensureWorld();
+    const sx = clamp(this.cam.x - this.shakeX, 0, Math.max(0, this.level.w - VIRTUAL_W));
+    const sy = clamp(this.cam.y - this.shakeY, 0, Math.max(0, this.level.h - VIRTUAL_H));
+    const ox = -this.cam.x + this.shakeX, oy = -this.cam.y + this.shakeY;
+    c.drawImage(this.worldCanvas, sx, sy, VIRTUAL_W, VIRTUAL_H, 0, 0, VIRTUAL_W, VIRTUAL_H);
     c.save(); c.translate(ox, oy); this.drawActors(c); c.restore();
     g.save(); g.globalCompositeOperation = 'lighter'; g.translate(ox, oy);
     for (const b of this.projectiles) { g.strokeStyle = b.color; g.lineWidth = 3; g.globalAlpha = .45; g.beginPath(); g.moveTo(b.px, b.py); g.lineTo(b.x, b.y); g.stroke(); } g.globalAlpha = 1;
